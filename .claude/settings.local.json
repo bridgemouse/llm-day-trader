@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__vault-query__get_wiki_index",
+      "mcp__vault-query__read_wiki_page",
+      "mcp__vault-query__search_wiki",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('mcp', d.get\\('mcpServers', d.get\\('tools', {}\\)\\)\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('plugins', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('agents', {}\\), indent=2\\)\\)\")",
+      "Bash(cat /home/wheat/.openclaw/agents/*.json)",
+      "Bash(cat /home/wheat/.openclaw/agents/main/agent/*.*)",
+      "Bash(openclaw --help)",
+      "Bash(openclaw agents *)",
+      "Bash(openclaw config *)",
+      "Bash(venv/bin/pip show *)",
+      "Bash(venv/bin/pip install *)",
+      "Bash(venv/bin/ruff --version)",
+      "Bash(venv/bin/ruff check *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "alpaca-trader"
+  ]
+}
