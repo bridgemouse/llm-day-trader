@@ -139,16 +139,17 @@ Output ONLY a JSON object with this exact schema:
 """
 
 
-def run_scanner(ticker: str | None = None) -> dict:
+def run_scanner(ticker: str | None = None, exclude: set | None = None) -> dict:
     print("\n── Phase 1: Scanner ──────────────────────────────────────")
 
     conditions = get_market_conditions()
     print(f"  VIX regime: {conditions.get('vix_regime')}  |  SPY trend: {conditions.get('spy_trend')}  |  SPY RSI: {conditions.get('spy_rsi')}")
 
     if ticker is None:
+        exclude_str = f"\nDo NOT pick any of these (already tried): {sorted(exclude)}" if exclude else ""
         raw = chat(
             SCANNER_SYSTEM,
-            [{"role": "user", "content": f"Macro data:\n{json.dumps(conditions, indent=2)}\n\nPick one ticker."}],
+            [{"role": "user", "content": f"Macro data:\n{json.dumps(conditions, indent=2)}\n\nPick one ticker.{exclude_str}"}],
             json_mode=True,
         )
         pick = json.loads(raw)
@@ -284,6 +285,22 @@ def evaluate_backtest(result: dict) -> tuple[bool, list[str]]:
     return len(failures) == 0, failures
 
 
+def _rsi_threshold_hint(ticker: str, period: str = "1y") -> str:
+    """Return the minimum RSI threshold that produces >= 5 entries over the period."""
+    from alpaca_mcp.backtester import _fetch_bars, _build_indicator_df
+    period_days = {"1y": 370, "2y": 740}
+    df = _fetch_bars(ticker, days=period_days.get(period, 370))
+    if df.empty or len(df) < 52:
+        return ""
+    df = _build_indicator_df(df)
+    rsi = df["rsi_14"].dropna()
+    for threshold in range(30, 60, 5):
+        crossings = (rsi < threshold).sum()
+        if crossings >= 5:
+            return f"Note: RSI < {threshold} would trigger on {int(crossings)} of {len(rsi)} trading days over 1y — use this or higher as your entry threshold to get enough trades."
+    return f"Note: even RSI < 55 only triggers {int((rsi < 55).sum())} times — consider using rsi < 55 as entry."
+
+
 def run_strategist(brief: dict) -> dict:
     print("\n── Phase 2: Strategist ───────────────────────────────────")
     ticker = brief["ticker"]
@@ -305,6 +322,10 @@ def run_strategist(brief: dict) -> dict:
     period = "1y"
     failures = ["no attempts completed"]
 
+    rsi_hint = _rsi_threshold_hint(ticker)
+    if rsi_hint:
+        print(f"  {rsi_hint}")
+
     VALID_INDICATORS = {"rsi_14", "sma_20", "sma_50", "ema_9", "ema_21",
                         "macd_hist", "macd", "macd_histogram", "trend",
                         "close", "volume", "volume_ratio"}
@@ -315,7 +336,7 @@ def run_strategist(brief: dict) -> dict:
         if attempt == 1:
             rules_raw = chat(
                 RULES_SYSTEM,
-                [{"role": "user", "content": f"Brief:\n{brief_str}\n\nDebate:\n{debate_str}\n\nGenerate entry/exit rules."}],
+                [{"role": "user", "content": f"Brief:\n{brief_str}\n\nDebate:\n{debate_str}\n\n{rsi_hint}\n\nGenerate entry/exit rules."}],
                 json_mode=True,
             )
         else:
@@ -466,16 +487,15 @@ def run_executor(spec: dict, brief: dict) -> dict:
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    invest_amount = portfolio_value * 0.20
+    # Use 19% (not 20%) to leave headroom for bid/ask spread at order submission time
+    invest_amount = portfolio_value * 0.19
     if cash < invest_amount:
         msg = f"Insufficient cash: need ${invest_amount:.2f}, have ${cash:.2f}"
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    current_price = brief["snapshot"].get("resistance", 0)
-    # Get a better price estimate from snapshot close if available
     raw_snapshot = get_market_snapshot(ticker)
-    current_price = raw_snapshot.get("price") or raw_snapshot.get("close") or current_price
+    current_price = raw_snapshot.get("price") or raw_snapshot.get("close") or 0
 
     if not current_price or current_price <= 0:
         msg = "Could not determine current price"
@@ -516,13 +536,22 @@ def main():
     else:
         # Auto-mode: scanner picks, retry up to 3 different tickers if NO-EDGE
         spec = None
-        tried = set()
+        tried: set[str] = set()
         for _attempt in range(3):
-            brief = run_scanner()
+            brief = run_scanner(exclude=tried)
             ticker = brief["ticker"]
             if ticker in tried:
-                print(f"  Skipping {ticker} (already tried)")
-                continue
+                print(f"  Scanner still returning {ticker} despite exclusion — stopping scan")
+                break
+            # Pre-screen: skip tickers with B&H > 40% (too hard to beat with short-term trades)
+            from alpaca_mcp.backtester import _fetch_bars
+            df_check = _fetch_bars(ticker, days=370)
+            if not df_check.empty and len(df_check) > 50:
+                bah_check = (df_check["close"].iloc[-1] - df_check["close"].iloc[0]) / df_check["close"].iloc[0] * 100
+                if bah_check > 40:
+                    print(f"  Skipping {ticker} — 1y B&H {bah_check:.1f}% too high, hard to beat with short-term trades")
+                    tried.add(ticker)
+                    continue
             tried.add(ticker)
             spec = run_strategist(brief)
             if spec["status"] == "PASS":
