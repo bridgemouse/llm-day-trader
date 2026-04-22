@@ -120,6 +120,8 @@ Verify: open positions < 3, available cash > order value, no existing position i
 
 **Operators:** `<`, `<=`, `>`, `>=`, `==`
 
+**IMPORTANT — `value` must always be a scalar (number or string). You CANNOT compare two indicators against each other (e.g. `sma_20 < sma_50` is invalid). To express a golden/death cross idea, use `trend == "uptrend"` or `trend == "downtrend"` instead.**
+
 **trend values:** `"uptrend"`, `"downtrend"`, `"sideways"`
 
 **Special exit types** (not indicator-based):

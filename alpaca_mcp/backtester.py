@@ -90,6 +90,12 @@ def _build_indicator_df(df: pd.DataFrame) -> pd.DataFrame:
     if macd is not None and not macd.empty:
         hist_col = [c for c in macd.columns if "h" in c.lower()][0]
         out["macd_hist"] = macd[hist_col]
+        out["macd"] = out["macd_hist"]           # alias: macd
+        out["macd_histogram"] = out["macd_hist"]  # alias: macd_histogram
+
+    # Volume ratio (current volume vs 20-day average)
+    vol_avg = out["volume"].rolling(20).mean()
+    out["volume_ratio"] = out["volume"] / vol_avg
 
     # Trend (categorical — use numeric encoding for rule eval)
     def classify(row_idx):
@@ -122,6 +128,9 @@ def _eval_condition(row: pd.Series, cond: dict) -> bool:
 
     actual = row[ind]
 
+    if val is None:
+        return False
+
     # String equality (e.g. trend == "uptrend")
     if isinstance(val, str):
         return actual == val if op == "==" else actual != val
@@ -146,7 +155,7 @@ def _eval_rule_set(row: pd.Series, conditions: list[dict]) -> bool:
     return all(_eval_condition(row, c) for c in conditions)
 
 
-def _sharpe(returns: pd.Series, risk_free: float = 0.05) -> float:
+def _sharpe(returns: pd.Series, risk_free: float = 0.0) -> float:
     if returns.std() == 0:
         return 0.0
     daily_rf = risk_free / 252
@@ -154,11 +163,11 @@ def _sharpe(returns: pd.Series, risk_free: float = 0.05) -> float:
     return round(float(excess.mean() / excess.std() * (252 ** 0.5)), 3)
 
 
-def _sortino(returns: pd.Series, risk_free: float = 0.05) -> float:
+def _sortino(returns: pd.Series, risk_free: float = 0.0) -> float:
     daily_rf = risk_free / 252
     excess = returns - daily_rf
     downside = excess[excess < 0]
-    if downside.std() == 0:
+    if downside.empty or downside.std() == 0:
         return 0.0
     return round(float(excess.mean() / downside.std() * (252 ** 0.5)), 3)
 
