@@ -4,7 +4,7 @@
 import os
 from dotenv import load_dotenv
 from alpaca.trading.client import TradingClient
-from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest
+from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 
 load_dotenv()
@@ -21,6 +21,30 @@ def _get_client() -> TradingClient:
             paper=True,
         )
     return _trading_client
+
+
+def _place_stop_loss(client: TradingClient, ticker: str, qty: float, entry_price: float) -> dict:
+    """
+    Submit a GTC stop-loss order at STOP_LOSS_PCT below entry price.
+    Called immediately after a buy order is submitted.
+    """
+    stop_price = round(entry_price * (1 - STOP_LOSS_PCT), 2)
+    req = StopOrderRequest(
+        symbol=ticker.upper(),
+        qty=qty,
+        side=OrderSide.SELL,
+        time_in_force=TimeInForce.GTC,
+        stop_price=stop_price,
+    )
+    try:
+        order = client.submit_order(req)
+        return {
+            "status": "submitted",
+            "order_id": str(order.id),
+            "stop_price": stop_price,
+        }
+    except Exception as e:
+        return {"error": str(e), "stop_price": stop_price}
 
 
 # Guard rails (from wiki strategy constraints)
@@ -159,7 +183,7 @@ def place_order(ticker: str, side: str, qty: float, order_type: str = "market", 
 
         order = client.submit_order(req)
 
-        return {
+        result = {
             "status": "submitted",
             "order_id": str(order.id),
             "ticker": ticker,
@@ -170,5 +194,60 @@ def place_order(ticker: str, side: str, qty: float, order_type: str = "market", 
             "submitted_at": str(order.submitted_at),
         }
 
+        # Place stop-loss immediately after a buy
+        if side == "buy" and limit_price:
+            sl = _place_stop_loss(client, ticker, qty, limit_price)
+            result["stop_loss_order_id"] = sl.get("order_id")
+            result["stop_loss_price"] = sl.get("stop_price")
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def close_position(ticker: str, reason: str = "") -> dict:
+    """
+    Close an entire open position with a market sell order.
+    Cancels any open stop orders for this ticker first (best effort).
+
+    Returns dict with status, order_id, qty, ticker.
+    """
+    ticker = ticker.upper()
+    client = _get_client()
+
+    positions = client.get_all_positions()
+    pos = next((p for p in positions if p.symbol == ticker), None)
+    if not pos:
+        return {"error": f"No open position for {ticker}"}
+
+    qty = float(pos.qty)
+
+    # Cancel any open stop orders for this ticker to avoid double-fills
+    try:
+        open_orders = client.get_orders()
+        for o in open_orders:
+            if o.symbol == ticker and o.order_type.value == "stop":
+                client.cancel_order_by_id(str(o.id))
+    except Exception:
+        pass  # best effort
+
+    req = MarketOrderRequest(
+        symbol=ticker,
+        qty=qty,
+        side=OrderSide.SELL,
+        time_in_force=TimeInForce.DAY,
+    )
+
+    try:
+        order = client.submit_order(req)
+        return {
+            "status": "submitted",
+            "order_id": str(order.id),
+            "ticker": ticker,
+            "qty": qty,
+            "reason": reason,
+            "submitted_at": str(order.submitted_at),
+        }
     except Exception as e:
         return {"error": str(e)}
