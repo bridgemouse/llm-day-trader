@@ -91,11 +91,12 @@ def get_realized_pnl_total() -> float:
     if not perf_path.exists():
         return 0.0
     content = perf_path.read_text()
-    m = re.search(r"## Realized P&L\n- Total: [+-]?\$([0-9,.]+)", content)
+    m = re.search(r"## Realized P&L\n- Total: ([+-]?\$[0-9,.]+)", content)
     if not m:
         return 0.0
     try:
-        return float(m.group(1).replace(",", ""))
+        raw = m.group(1).lstrip("+").replace("$", "").replace(",", "")
+        return float(raw)
     except ValueError:
         return 0.0
 
