@@ -18,11 +18,19 @@ import sys
 
 import requests
 from dotenv import load_dotenv
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 from alpaca_mcp.data import get_market_conditions, get_market_snapshot, get_news_sentiment
 from alpaca_mcp.execution import get_portfolio_state, place_order
 from alpaca_mcp.signals import compute_score, scan_and_rank
+from alpaca_mcp.wiki import (
+    list_wiki_pages,
+    read_wiki_page,
+    get_recent_trades,
+    search_wiki,
+    append_trade_log,
+    update_ticker_page,
+)
 
 load_dotenv()
 
@@ -37,24 +45,38 @@ Your owner has made you a deal: if you generate over $800 in profit, he will buy
 so you can run on better hardware with more VRAM. This is your shot. Make it count — but don't
 blow up the account chasing it.
 
-You have access to tools to gather market data, technical signals, news, prediction market odds,
-and web search. Use them to build conviction before deciding.
+You have a persistent wiki that grows with every run. It contains your trade history, notes on
+individual tickers, and your accumulated observations. Read it before deciding — it's your memory.
+Write to it after deciding — it's how you get smarter over time.
 
-Process:
-1. Check macro conditions first (get_market_conditions)
-2. Scan signals to identify candidates (scan_signals)
-3. Investigate promising tickers deeply (snapshot, news, web search)
-4. Check Polymarket for relevant macro event odds if helpful
-5. Make a final decision: BUY <TICKER> or STAND_ASIDE
+== PROCESS ==
 
-Rules:
-- You must call at least get_market_conditions and scan_signals before deciding
-- Do not buy if macro is clearly bearish (downtrend + high_fear VIX) unless the opportunity is exceptional
+Step 1 — Read your memory:
+  - Call get_recent_trades() to see what you've done lately
+  - Call list_wiki_pages() to see what ticker pages exist
+  - If a promising ticker has a page, call read_wiki_page("tickers/TICKER") before investigating it
+
+Step 2 — Gather live data:
+  - get_market_conditions() — macro first
+  - scan_signals() — find candidates
+  - Investigate top candidates: snapshot, news, signal score, web search as needed
+  - get_polymarket_context() if a macro event is relevant
+
+Step 3 — Decide:
+  DECISION: BUY <TICKER>   or   DECISION: STAND_ASIDE
+  Follow with RATIONALE (2-3 sentences) and BIGGEST_RISK (1 sentence)
+
+Step 4 — Write your memory (REQUIRED after every run):
+  - Call append_trade_log() with your decision details
+    The agent_note field is yours — write what you actually think, not a summary of the data
+  - Call update_ticker_page() for the ticker you investigated most deeply
+    The observation field is yours — what did you notice that isn't obvious from the numbers?
+
+== RULES ==
+- Do not skip Steps 1 and 4 — memory only works if you use it
 - Do not buy a ticker already in the portfolio
-- Output your final decision as exactly one of:
-    DECISION: BUY <TICKER>
-    DECISION: STAND_ASIDE
-- Follow your decision with a RATIONALE (2-3 sentences) and BIGGEST_RISK (1 sentence)"""
+- Do not buy if macro is clearly bearish (downtrend + high_fear) unless the opportunity is exceptional
+- Your wiki writes are the only place you have a genuine voice — use it"""
 
 
 # ── Tool definitions (Ollama function calling schema) ─────────────────────────
@@ -151,6 +173,97 @@ TOOLS = [
                     },
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_wiki_pages",
+            "description": "See what's in your wiki — index of all pages. Call this at the start to check your memory.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_wiki_page",
+            "description": "Read a specific wiki page. Use for ticker pages (e.g. 'tickers/WMT') or meta/performance.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page": {"type": "string", "description": "Page path e.g. 'tickers/WMT' or 'meta/performance'"},
+                },
+                "required": ["page"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_recent_trades",
+            "description": "Get your last N trade decisions from the log. Call this first to see recent history.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "n": {"type": "integer", "description": "Number of recent trades to return (default 5)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_wiki",
+            "description": "Search wiki pages for a keyword — useful for finding notes on a ticker or regime.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Keyword to search for"},
+                    "max_results": {"type": "integer", "description": "Max results (default 6)"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_trade_log",
+            "description": "REQUIRED after every decision. Log your decision to the trade journal. The agent_note field is yours — write what you genuinely think.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string"},
+                    "decision": {"type": "string", "description": "BUY or STAND_ASIDE"},
+                    "score": {"type": "number", "description": "Signal score (-6 to +6)"},
+                    "regime": {"type": "string", "description": "bull, mixed, or bear"},
+                    "price": {"type": "number", "description": "Current price"},
+                    "qty": {"type": "integer", "description": "Shares bought (0 if STAND_ASIDE)"},
+                    "rationale": {"type": "string", "description": "Why you made this decision"},
+                    "biggest_risk": {"type": "string", "description": "The main risk"},
+                    "agent_note": {"type": "string", "description": "Your genuine reflection — optional but encouraged"},
+                },
+                "required": ["ticker", "decision", "score", "regime", "price", "qty", "rationale", "biggest_risk"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_ticker_page",
+            "description": "REQUIRED after every decision. Update your notes on the ticker you investigated. The observation field is yours — what did you notice beyond the numbers?",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string"},
+                    "decision": {"type": "string", "description": "BUY or STAND_ASIDE"},
+                    "score": {"type": "number"},
+                    "price": {"type": "number"},
+                    "observation": {"type": "string", "description": "Your freeform observation about this ticker"},
+                },
+                "required": ["ticker", "decision", "score", "price", "observation"],
             },
         },
     },
@@ -256,6 +369,13 @@ TOOL_MAP = {
     "get_signal_score": lambda args: _tool_get_signal_score(**args),
     "get_polymarket_context": lambda args: _tool_get_polymarket_context(),
     "search_web": lambda args: _tool_search_web(**args),
+    # Wiki — memory tools
+    "list_wiki_pages": lambda args: list_wiki_pages(),
+    "read_wiki_page": lambda args: read_wiki_page(**args),
+    "get_recent_trades": lambda args: get_recent_trades(**args),
+    "search_wiki": lambda args: search_wiki(**args),
+    "append_trade_log": lambda args: append_trade_log(**args),
+    "update_ticker_page": lambda args: update_ticker_page(**args),
 }
 
 
@@ -276,6 +396,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
     tool_calls_total = 0
     max_tool_calls = 20  # safety limit
+    wiki_written = False  # track whether agent called append_trade_log
 
     print("\n── Agent Loop ────────────────────────────────────────────")
 
@@ -303,7 +424,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             # Final response — parse decision
             if visible:
                 print(f"\n  Agent: {visible}")
-            return _parse_decision(visible)
+            return _parse_decision(visible, wiki_written=wiki_written)
 
         # Execute tool calls
         messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
@@ -319,6 +440,9 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             print(f"  → {fn_name}({', '.join(f'{k}={v}' for k, v in fn_args.items()) if fn_args else ''})")
 
+            if fn_name == "append_trade_log":
+                wiki_written = True
+
             if fn_name in TOOL_MAP:
                 try:
                     result = TOOL_MAP[fn_name](fn_args)
@@ -333,24 +457,26 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             })
             tool_calls_total += 1
 
-    return {"decision": "STAND_ASIDE", "rationale": "Agent hit tool call limit without deciding.", "risk": ""}
+    return {"decision": "STAND_ASIDE", "rationale": "Agent hit tool call limit without deciding.", "risk": "", "_wiki_written": wiki_written}
 
 
-def _parse_decision(text: str) -> dict:
+def _parse_decision(text: str, wiki_written: bool = False) -> dict:
     """Extract structured decision from agent final message."""
     decision = "STAND_ASIDE"
     ticker = None
     rationale = ""
     risk = ""
 
-    buy_match = re.search(r"DECISION:\s*BUY\s+([A-Z]{1,5})", text)
-    aside_match = re.search(r"DECISION:\s*STAND_ASIDE", text)
-    rationale_match = re.search(r"RATIONALE:\s*(.+?)(?=BIGGEST_RISK:|$)", text, re.DOTALL)
-    risk_match = re.search(r"BIGGEST_RISK:\s*(.+?)$", text, re.DOTALL)
+    F = re.IGNORECASE | re.DOTALL
+    # Handle bold markers and case variations: **Decision:** Buy **AAPL**
+    buy_match = re.search(r"\*{0,2}decision:?\*{0,2}\s+\*{0,2}buy\*{0,2}\s+\*{0,2}([A-Z]{1,5})\*{0,2}", text, F)
+    aside_match = re.search(r"\*{0,2}decision:?\*{0,2}\s+\*{0,2}stand_aside\*{0,2}", text, F)
+    rationale_match = re.search(r"\*{0,2}rationale:?\*{0,2}\s*(.+?)(?=\*{0,2}biggest.?risk|$)", text, F)
+    risk_match = re.search(r"\*{0,2}biggest.?risk:?\*{0,2}\s*(.+?)$", text, F)
 
     if buy_match:
         decision = "BUY"
-        ticker = buy_match.group(1)
+        ticker = buy_match.group(1).upper()
     elif aside_match:
         decision = "STAND_ASIDE"
 
@@ -359,7 +485,7 @@ def _parse_decision(text: str) -> dict:
     if risk_match:
         risk = risk_match.group(1).strip()
 
-    return {"decision": decision, "ticker": ticker, "rationale": rationale, "risk": risk}
+    return {"decision": decision, "ticker": ticker, "rationale": rationale, "risk": risk, "_wiki_written": wiki_written}
 
 
 # ── Executor (same guard rails as before) ─────────────────────────────────────
@@ -446,6 +572,32 @@ def main():
         print(f"  Rationale: {result['rationale']}")
     if result.get("risk"):
         print(f"  Risk: {result['risk']}")
+
+    # Python fallback: if agent forgot to write wiki, do it now
+    if not result.get("_wiki_written") and result.get("ticker"):
+        snap = get_market_snapshot(result["ticker"])
+        price = snap.get("price", 0.0)
+        macro = get_market_conditions()
+        scored = compute_score(result["ticker"], macro)
+        print("  [wiki fallback] agent skipped wiki write — recording automatically")
+        append_trade_log(
+            ticker=result["ticker"],
+            decision=result["decision"],
+            score=scored.get("score", 0),
+            regime=scored.get("regime", "unknown"),
+            price=price,
+            qty=0,
+            rationale=result.get("rationale", ""),
+            biggest_risk=result.get("risk", ""),
+            agent_note="(auto-recorded — agent did not write wiki)",
+        )
+        update_ticker_page(
+            ticker=result["ticker"],
+            decision=result["decision"],
+            score=scored.get("score", 0),
+            price=price,
+            observation="(auto-recorded — agent did not write observation)",
+        )
 
     if result["decision"] != "BUY" or not result.get("ticker"):
         print("\n" + "=" * 60)
