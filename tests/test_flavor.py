@@ -1,7 +1,4 @@
 # tests/test_flavor.py
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from agent.flavor import (
     get_idle_prompt,
     get_phase_flavor,
@@ -24,7 +21,7 @@ def test_idle_prompts_cycle():
 def test_idle_prompt_contains_countdown():
     # get_idle_prompt with minutes param embeds the countdown
     p = get_idle_prompt(minutes=34)
-    assert "34" in p or "min" in p.lower()
+    assert "34" in p and "min" in p.lower()
 
 
 def test_phase_flavor_scan():
