@@ -85,11 +85,12 @@ def render_cycle_report(
         connector = "└─" if i == len(positions) - 1 else "├─"
         pl = pos["unrealized_pl"]
         plpc = pos["unrealized_plpc"]
-        sign = "+" if pl >= 0 else ""
+        pl_str = f"+${pl:,.2f}" if pl >= 0 else f"-${abs(pl):,.2f}"
+        plpc_str = f"+{plpc:.2f}%" if plpc >= 0 else f"{plpc:.2f}%"
         lines.append(_row(
             f"  {connector} {pos['ticker']:<6} {pos['qty']:.0f} shares"
             f"  ${pos['current_price']:.2f}"
-            f"   {sign}${pl:,.2f}  ({sign}{plpc:.2f}%)"
+            f"   {pl_str}  ({plpc_str})"
         ))
     cash = portfolio.get("cash", 0.0)
     lines.append(_row(f"  └─ Cash   ${cash:,.2f}"))
@@ -97,12 +98,12 @@ def render_cycle_report(
 
     total_val = portfolio.get("portfolio_value", 0.0)
     unreal = portfolio.get("total_unrealized_pl", 0.0)
-    unreal_sign = "+" if unreal >= 0 else ""
-    real_sign = "+" if realized_pnl >= 0 else ""
+    unreal_str = f"+${unreal:,.2f}" if unreal >= 0 else f"-${abs(unreal):,.2f}"
+    real_str = f"+${realized_pnl:,.2f}" if realized_pnl >= 0 else f"-${abs(realized_pnl):,.2f}"
 
     lines.append(_row(f"Total Value:      ${total_val:>12,.2f}"))
-    lines.append(_row(f"Unrealized P&L:   {unreal_sign}${unreal:>10,.2f}   (still at risk)"))
-    lines.append(_row(f"Realized P&L:     {real_sign}${realized_pnl:>10,.2f}   (locked in)"))
+    lines.append(_row(f"Unrealized P&L:   {unreal_str:<16}  (still at risk)"))
+    lines.append(_row(f"Realized P&L:     {real_str:<16}  (locked in)"))
 
     lines.append(_divider())
 
