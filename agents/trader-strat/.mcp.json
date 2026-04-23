@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "alpaca-trader": {
-      "command": "/home/wheat/projects/llm-day-trader/venv/bin/python",
-      "args": ["-m", "alpaca_mcp.server"],
-      "cwd": "/home/wheat/projects/llm-day-trader"
-    }
-  }
-}

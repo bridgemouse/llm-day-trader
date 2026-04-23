@@ -15,7 +15,6 @@ Pipeline:
     5. optional LLM thesis           → 60-word explanation (Ollama)
 """
 
-import json
 import math
 import re
 import sys
@@ -25,7 +24,7 @@ from dotenv import load_dotenv
 
 from alpaca_mcp.data import get_market_conditions, get_market_snapshot
 from alpaca_mcp.execution import get_portfolio_state, place_order
-from alpaca_mcp.signals import compute_score, scan_and_rank, WHITELIST
+from alpaca_mcp.signals import compute_score, scan_and_rank
 
 load_dotenv()
 
@@ -158,11 +157,10 @@ def main():
     # ── Phase 1: Macro conditions ─────────────────────────────────────────────
     print("\n── Phase 1: Market Conditions ────────────────────────────")
     macro = get_market_conditions()
-    vix = macro.get("vix_proxy_price") or macro.get("vix_regime")
     print(f"  VIX: {macro.get('vix_proxy_price')} ({macro.get('vix_regime')})  |  SPY: {macro.get('spy_trend')}")
     sectors = macro.get("sector_trends", {})
     if sectors:
-        print(f"  Sectors: " + "  ".join(f"{k}={v}" for k, v in sectors.items()))
+        print("  Sectors: " + "  ".join(f"{k}={v}" for k, v in sectors.items()))
 
     # ── Phase 2: Signal scoring ───────────────────────────────────────────────
     print("\n── Phase 2: Signal Scoring ───────────────────────────────")
@@ -181,7 +179,7 @@ def main():
         # Scan all — score every ticker, show top 10
         print("  Scanning 31 tickers...", end="", flush=True)
         ranked = scan_and_rank(macro)
-        print(f" done.")
+        print(" done.")
         print()
         for r in ranked[:10]:
             print_score(r, highlight=(r is ranked[0]))
@@ -194,13 +192,13 @@ def main():
         return
 
     # ── Decision ──────────────────────────────────────────────────────────────
-    print(f"\n── Decision ──────────────────────────────────────────────")
+    print("\n── Decision ──────────────────────────────────────────────")
     print(f"  Best candidate: {top['ticker']}  score={top['score']:+.0f}  threshold={top['threshold']}  regime={top['regime']}")
 
     if top["signal"] != "BUY":
         gap = top["threshold"] - top["score"]
         print(f"  No trade — score is {gap:.0f} point(s) below threshold for {top['regime']} regime")
-        print(f"  Weakest factors: " + ", ".join(
+        print("  Weakest factors: " + ", ".join(
             k for k, v in top["factors"].items() if v < 0
         ))
         return

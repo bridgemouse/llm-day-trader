@@ -55,43 +55,53 @@ def compute_score(ticker: str, macro: dict) -> dict:
     # ── Factor 1: Price vs SMA(20) ────────────────────────────────────────────
     if sma20 is not None:
         if close > sma20:
-            score += 1; factors["sma20"] = +1
+            score += 1
+            factors["sma20"] = +1
         else:
-            score -= 1; factors["sma20"] = -1
+            score -= 1
+            factors["sma20"] = -1
     else:
         factors["sma20"] = 0
 
     # ── Factor 2: Price vs SMA(50) ────────────────────────────────────────────
     if sma50 is not None:
         if close > sma50:
-            score += 1; factors["sma50"] = +1
+            score += 1
+            factors["sma50"] = +1
         else:
-            score -= 1; factors["sma50"] = -1
+            score -= 1
+            factors["sma50"] = -1
     else:
         factors["sma50"] = 0
 
     # ── Factor 3: RSI — momentum zone ────────────────────────────────────────
     # 45–65 = healthy trend (bullish); <35 or >75 = extreme (caution)
     if 45 <= rsi <= 65:
-        score += 1; factors["rsi"] = +1
+        score += 1
+        factors["rsi"] = +1
     elif rsi < 35 or rsi > 75:
-        score -= 1; factors["rsi"] = -1
+        score -= 1
+        factors["rsi"] = -1
     else:
         factors["rsi"] = 0
 
     # ── Factor 4: MACD direction ──────────────────────────────────────────────
     if "bullish" in macd_sig:
-        score += 1; factors["macd"] = +1
+        score += 1
+        factors["macd"] = +1
     elif "bearish" in macd_sig:
-        score -= 1; factors["macd"] = -1
+        score -= 1
+        factors["macd"] = -1
     else:
         factors["macd"] = 0
 
     # ── Factor 5: 5-day price return ──────────────────────────────────────────
     if ret_5d > 0.02:
-        score += 1; factors["ret_5d"] = +1
+        score += 1
+        factors["ret_5d"] = +1
     elif ret_5d < -0.02:
-        score -= 1; factors["ret_5d"] = -1
+        score -= 1
+        factors["ret_5d"] = -1
     else:
         factors["ret_5d"] = 0
 
@@ -99,9 +109,11 @@ def compute_score(ticker: str, macro: dict) -> dict:
     pct_above_support = (close - support) / support if support else 1.0
     pct_below_resistance = (resistance - close) / close if resistance else 1.0
     if pct_above_support <= 0.03:          # within 3% above support → potential bounce
-        score += 1; factors["proximity"] = +1
+        score += 1
+        factors["proximity"] = +1
     elif pct_below_resistance <= 0.02:     # within 2% of resistance → potential ceiling
-        score -= 1; factors["proximity"] = -1
+        score -= 1
+        factors["proximity"] = -1
     else:
         factors["proximity"] = 0
 

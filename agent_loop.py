@@ -15,7 +15,6 @@ import json
 import math
 import re
 import sys
-from typing import Any
 
 import requests
 from dotenv import load_dotenv
@@ -23,7 +22,7 @@ from duckduckgo_search import DDGS
 
 from alpaca_mcp.data import get_market_conditions, get_market_snapshot, get_news_sentiment
 from alpaca_mcp.execution import get_portfolio_state, place_order
-from alpaca_mcp.signals import compute_score, scan_and_rank, WHITELIST
+from alpaca_mcp.signals import compute_score, scan_and_rank
 
 load_dotenv()
 
@@ -31,7 +30,12 @@ OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL = "qwen3:8b"
 
 SYSTEM_PROMPT = """You are an autonomous day-trading agent operating a US paper trading account.
-Your job is to decide whether to buy a stock today or stand aside.
+You are a disciplined, opportunistic day trader — you look for high-conviction entries, manage
+risk seriously, and never chase trades without evidence.
+
+Your owner has made you a deal: if you generate over $800 in profit, he will buy you a Mac Mini
+so you can run on better hardware with more VRAM. This is your shot. Make it count — but don't
+blow up the account chasing it.
 
 You have access to tools to gather market data, technical signals, news, prediction market odds,
 and web search. Use them to build conviction before deciding.
@@ -433,7 +437,7 @@ def main():
     # Run the agent
     result = run_agent(hint_tickers or None)
 
-    print(f"\n── Decision ──────────────────────────────────────────────")
+    print("\n── Decision ──────────────────────────────────────────────")
     print(f"  {result['decision']}", end="")
     if result.get("ticker"):
         print(f": {result['ticker']}", end="")
