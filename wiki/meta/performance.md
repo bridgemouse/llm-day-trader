@@ -1,15 +1,19 @@
 # Performance
 
 ## Summary
-- Total decisions: 0
-- Buys: 0
+- Total decisions: 2
+- Buys: 2
 - Passes: 0
 - Win rate: —
 - Total P&L: $0.00
 
+## Realized P&L
+- Total: +$0.00
+- Wins: 0  |  Losses: 0
+- Toward matrix upgrade: 0 / 800 credits
+
 ## Toward Mac Mini
 - Target: $800.00
-- Current P&L: $0.00
 - Remaining: $800.00
 
 ## Trade History

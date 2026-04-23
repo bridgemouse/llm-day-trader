@@ -85,6 +85,21 @@ def search_wiki(query: str, max_results: int = 6) -> dict:
     return {"results": results, "count": len(results)}
 
 
+def get_realized_pnl_total() -> float:
+    """Return total realized P&L from wiki/meta/performance.md."""
+    perf_path = WIKI_DIR / "meta" / "performance.md"
+    if not perf_path.exists():
+        return 0.0
+    content = perf_path.read_text()
+    m = re.search(r"## Realized P&L\n- Total: [+-]?\$([0-9,.]+)", content)
+    if not m:
+        return 0.0
+    try:
+        return float(m.group(1).replace(",", ""))
+    except ValueError:
+        return 0.0
+
+
 # ── Write tools ───────────────────────────────────────────────────────────────
 
 def append_trade_log(
@@ -97,6 +112,8 @@ def append_trade_log(
     rationale: str,          # freeform — agent writes this
     biggest_risk: str,       # freeform — agent writes this
     agent_note: str = "",    # freeform — personality, reflection, anything
+    conviction: int = 0,
+    conviction_note: str = "",
 ) -> dict:
     """
     Append a structured entry to the trade log.
@@ -116,6 +133,11 @@ def append_trade_log(
 """
     if agent_note:
         entry += f"- **Note:** {agent_note}\n"
+    if conviction:
+        entry += f"- **Conviction: {conviction}/10**"
+        if conviction_note:
+            entry += f" — {conviction_note}"
+        entry += "\n"
 
     entry += "\n---\n"
 
@@ -186,7 +208,80 @@ def update_ticker_page(
     return {"status": "updated", "ticker": ticker}
 
 
+def close_position_wiki(
+    ticker: str,
+    exit_price: float,
+    pnl_usd: float,
+    pnl_pct: float,
+    reason: str,
+) -> dict:
+    """
+    Record a position close: append a CLOSE entry to log.md and update realized P&L.
+    Called by the tools layer after a sell order is submitted.
+    """
+    ticker = ticker.upper()
+    log_path = WIKI_DIR / "log.md"
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    sign = "+" if pnl_usd >= 0 else ""
+    outcome = "WIN" if pnl_usd >= 0 else "LOSS"
+
+    entry = f"""
+## [{date_str}] CLOSE {ticker}
+- **Exit Price:** ${exit_price:.2f}
+- **Realized P&L:** {sign}${pnl_usd:.2f}  ({sign}{pnl_pct:.2f}%)
+- **Outcome:** {outcome}
+- **Reason:** {reason}
+
+---
+"""
+    with open(log_path, "a") as f:
+        f.write(entry)
+
+    _update_realized_pnl(pnl_usd)
+
+    return {"status": "logged", "ticker": ticker, "pnl_usd": pnl_usd, "outcome": outcome}
+
+
 # ── Internal helpers ───────────────────────────────────────────────────────────
+
+def _update_realized_pnl(pnl_usd: float) -> None:
+    """Update realized P&L total in wiki/meta/performance.md."""
+    perf_path = WIKI_DIR / "meta" / "performance.md"
+    if not perf_path.exists():
+        return
+
+    content = perf_path.read_text()
+
+    # Parse current total
+    m = re.search(r"(## Realized P&L\n- Total: )[+-]?\$([0-9,.]+)", content)
+    if not m:
+        return
+    current = float(m.group(2).replace(",", ""))
+    new_total = current + pnl_usd
+    sign = "+" if new_total >= 0 else ""
+    content = content[:m.start(1)] + f"## Realized P&L\n- Total: {sign}${new_total:.2f}" + content[m.end():]
+
+    # Update win/loss counts
+    win_label = "Wins" if pnl_usd >= 0 else "Losses"
+    content = _increment_counter(content, win_label)
+
+    # Update "Toward matrix upgrade" line
+    content = re.sub(
+        r"- Toward matrix upgrade: .+",
+        f"- Toward matrix upgrade: {max(0.0, new_total):.0f} / 800 credits",
+        content,
+    )
+
+    # Update "Remaining" in Toward Mac Mini section
+    remaining = max(0.0, 800.0 - new_total)
+    content = re.sub(
+        r"- Remaining: \$[0-9,.]+",
+        f"- Remaining: ${remaining:.2f}",
+        content,
+    )
+
+    perf_path.write_text(content)
+
 
 def _increment_counter(content: str, label: str) -> str:
     def inc(m):
