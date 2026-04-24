@@ -257,12 +257,8 @@ def main():
             cycle_summary = run_cycle(hint_tickers)
             last_cycle_summary = cycle_summary
 
-            # Auto-show report on BUY
-            if cycle_summary["decision"] == "BUY":
-                show_report(cycle_summary, CYCLE_INTERVAL_MIN)
-            else:
-                print(f"\n  STAND_ASIDE")
-                print("  (Type 'report' at the prompt for the full cycle view)")
+            # Always show the cycle report
+            show_report(cycle_summary, CYCLE_INTERVAL_MIN)
 
             # Idle loop
             while True:

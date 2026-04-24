@@ -12,7 +12,7 @@ ET = ZoneInfo("America/New_York")
 
 def _row(text: str = "") -> str:
     """Format a single box row, padding to full width."""
-    return f"║  {text:<{_WIDTH - 2}}║"
+    return f"║  {text:<{_WIDTH}}║"
 
 
 def _divider() -> str:
@@ -28,7 +28,7 @@ def _bottom() -> str:
 
 
 def _progress_bar(realized: float, target: float = 800.0, width: int = 10) -> str:
-    pct = min(1.0, realized / target) if target > 0 else 0.0
+    pct = min(1.0, max(0.0, realized / target)) if target > 0 else 0.0
     filled = round(pct * width)
     bar = "█" * filled + "░" * (width - filled)
     return f"[{bar}]  {round(pct * 100):.0f}%"
@@ -65,7 +65,7 @@ def render_cycle_report(
 
     # Header
     header = f"CYCLE REPORT — {ts_str}"
-    lines.append(_row(header.center(_WIDTH - 2)))
+    lines.append(_row(header.center(_WIDTH)))
 
     lines.append(_divider())
 
@@ -82,7 +82,7 @@ def render_cycle_report(
     lines.append(_row("PORTFOLIO"))
     positions = portfolio.get("positions", [])
     for i, pos in enumerate(positions):
-        connector = "└─" if i == len(positions) - 1 else "├─"
+        connector = "├─"
         pl = pos["unrealized_pl"]
         plpc = pos["unrealized_plpc"]
         pl_str = f"+${pl:,.2f}" if pl >= 0 else f"-${abs(pl):,.2f}"
@@ -110,7 +110,7 @@ def render_cycle_report(
     # Mac Mini progress bar
     bar_str = _progress_bar(realized_pnl, 800.0)
     remaining = max(0.0, 800.0 - realized_pnl)
-    lines.append(_row(f"🍎 Matrix Upgrade:  {realized_pnl:.0f} / 800 credits  {bar_str}"))
+    lines.append(_row(f"[MAC] Upgrade:  {realized_pnl:.2f} / 800 credits  {bar_str}"))
     if realized_pnl >= 800:
         lines.append(_row('"Mac Mini acquired. K-4SH upgrades. The galaxy trembles."'))
     elif realized_pnl > 0:
