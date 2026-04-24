@@ -7,7 +7,7 @@ import json
 import requests
 from ddgs import DDGS
 
-from alpaca_mcp.data import get_market_conditions, get_market_snapshot, get_news_sentiment
+from alpaca_mcp.data import get_market_conditions, get_market_snapshot, get_news_sentiment, get_indicators
 from alpaca_mcp.execution import get_portfolio_state, place_order, close_position as _exec_close_position
 from alpaca_mcp.signals import compute_score, scan_and_rank
 from alpaca_mcp.wiki import (
@@ -148,6 +148,25 @@ TOOLS = [
                     "ticker": {"type": "string", "description": "Stock ticker symbol e.g. AAPL"}
                 },
                 "required": ["ticker"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_indicators",
+            "description": "Compute specific technical indicators for a ticker. Use when get_market_snapshot isn't enough — e.g. Bollinger Bands for squeeze setups, ATR for volatility sizing, EMA for faster trend signals.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string"},
+                    "indicators": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Any of: rsi_14, sma_20, sma_50, ema_9, ema_21, macd, bbands, atr, volume_ratio",
+                    },
+                },
+                "required": ["ticker", "indicators"],
             },
         },
     },
@@ -378,6 +397,10 @@ def _tool_get_market_snapshot(ticker: str) -> dict:
     return get_market_snapshot(ticker.upper())
 
 
+def _tool_get_indicators(ticker: str, indicators: list[str]) -> dict:
+    return get_indicators(ticker.upper(), indicators)
+
+
 def _tool_get_news_sentiment(ticker: str, days: int = 7) -> dict:
     return get_news_sentiment(ticker.upper(), days)
 
@@ -437,6 +460,7 @@ TOOL_MAP = {
     "get_market_conditions":  lambda args: _tool_get_market_conditions(),
     "scan_signals":           lambda args: _tool_scan_signals(**args),
     "get_market_snapshot":    lambda args: _tool_get_market_snapshot(**args),
+    "get_indicators":         lambda args: _tool_get_indicators(**args),
     "get_news_sentiment":     lambda args: _tool_get_news_sentiment(**args),
     "get_signal_score":       lambda args: _tool_get_signal_score(**args),
     "get_polymarket_context": lambda args: _tool_get_polymarket_context(),

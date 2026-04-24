@@ -10,6 +10,7 @@ Usage:
 """
 
 import json
+import os
 import re
 import select
 import sys
@@ -37,8 +38,8 @@ load_dotenv()
 ET = ZoneInfo("America/New_York")
 CYCLE_INTERVAL_MIN = 45
 DRY_RUN = "--dry-run" in sys.argv
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "qwen3:8b"
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
 
 
 # ── Market hours ──────────────────────────────────────────────────────────────

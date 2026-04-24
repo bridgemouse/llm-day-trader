@@ -3,15 +3,19 @@
 # Phase flavor text is printed as tools are called.
 
 import json
+import os
 import re
 
 import requests
+from dotenv import load_dotenv
 
 from agent.flavor import get_phase_flavor
 from agent.tools import TOOLS, TOOL_MAP, SYSTEM_PROMPT
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "qwen3:8b"
+load_dotenv()
+
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
 
 # Maps tool names to phase keys for flavor text
 _TOOL_PHASE = {
@@ -22,6 +26,7 @@ _TOOL_PHASE = {
     "get_market_conditions":  "macro",
     "scan_signals":           "scan",
     "get_market_snapshot":    "snapshot",
+    "get_indicators":         "snapshot",
     "get_news_sentiment":     "news",
     "get_signal_score":       "score",
     "get_polymarket_context": "score",
@@ -56,7 +61,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     ]
 
     tool_calls_total = 0
-    max_tool_calls = 25
+    max_tool_calls = 40
     wiki_written = False
 
     while tool_calls_total < max_tool_calls:
