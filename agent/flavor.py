@@ -42,7 +42,7 @@ _PHASE_FLAVOR = {
     "score":    "🎰 Consulting the Jedha oracle...",
     "web":      "🌐 Dispatching probe droids: '{query}'...",
     "report":   "✍️  Filing the after-action report. Fulcrum would approve.",
-    "sell":     "⚔️  Executing exit order. The Mandalorian does not hesitate.",
+    "sell":     "⚔️  Closing {ticker}. The Mandalorian does not hesitate.",
     "portfolio":"📊 Reviewing the manifest. Every credit accounted for.",
 }
 

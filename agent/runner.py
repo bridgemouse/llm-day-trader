@@ -65,7 +65,11 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
         "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text."
     )
     if _held:
-        user_msg += f" IMPORTANT: You currently hold {', '.join(_held)}. Do NOT buy these tickers — they are already in the portfolio."
+        user_msg += (
+            f" CRITICAL: You currently hold {', '.join(_held)}. "
+            f"Do NOT buy, investigate, or close these tickers — find an entirely different stock. "
+            f"Never close a position just to rebuy it."
+        )
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
 
@@ -86,6 +90,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     _once_only = {
         "get_portfolio_state", "get_market_conditions",
         "append_trade_log", "update_ticker_page",
+        "close_position",
     }
 
     while tool_calls_total < max_tool_calls:
