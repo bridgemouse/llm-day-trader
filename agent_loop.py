@@ -14,6 +14,7 @@ import os
 import re
 import select
 import sys
+import textwrap
 from datetime import datetime, time as dt_time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -137,7 +138,7 @@ def run_cycle(hint_tickers: list[str]) -> dict:
     exec_result = {"status": "STAND_ASIDE"}
 
     if result["decision"] == "BUY" and result.get("ticker"):
-        print("\n── Executor ──────────────────────────────────────────────────────")
+        print("\n" + "─" * 68)
         exec_result = run_executor(result["ticker"], dry_run=DRY_RUN)
 
     return {
@@ -156,7 +157,7 @@ def show_report(cycle_summary: dict, next_scan_min: int) -> None:
     try:
         portfolio = get_portfolio_state()
     except Exception as e:
-        print(f"  [K-4SH] Could not fetch portfolio for report: {e}")
+        print(f"  ! Could not fetch portfolio for report: {e}")
         return
     realized_pnl = get_realized_pnl_total()
     report = render_cycle_report(
@@ -203,7 +204,13 @@ def _handle_chat(user_input: str) -> None:
 
         if not tool_calls:
             if visible:
-                print(f"\n  K-4SH: {visible}\n")
+                wrapped = textwrap.fill(
+                    visible,
+                    width=68,
+                    initial_indent="  K-4SH: ",
+                    subsequent_indent="          ",
+                )
+                print(f"\n{wrapped}\n")
             return
 
         messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})

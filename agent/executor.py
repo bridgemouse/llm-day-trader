@@ -59,7 +59,7 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
     print(f"  Submitting: BUY {qty_display} {ticker} @ ~${live_price:.2f}  (${qty * live_price:,.2f})")
 
     if dry_run:
-        print("  [dry-run] order not submitted")
+        print("  ~ dry-run — order not submitted")
         return {"status": "DRY_RUN", "qty": qty, "ticker": ticker, "price": live_price}
 
     order_result = place_order(ticker, "buy", qty, limit_price=live_price)
@@ -88,7 +88,7 @@ def wiki_fallback(result: dict) -> None:
     If the agent forgot to write wiki, auto-record the decision.
     Called from agent_loop.py when _wiki_written is False.
     """
-    print("  [wiki fallback] agent skipped wiki write — recording automatically")
+    print("  ~ wiki fallback — agent skipped log write, recording automatically")
     ticker = result.get("ticker") or "NONE"
     decision = result.get("decision", "STAND_ASIDE")
 

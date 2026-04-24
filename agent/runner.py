@@ -109,7 +109,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
-            print(f"  [K-4SH] Ollama request failed: {e}")
+            print(f"  ! Ollama request failed: {e}")
             return {
                 "decision": "STAND_ASIDE",
                 "ticker": None,
@@ -125,8 +125,13 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
         if not tool_calls:
             if visible:
-                wrapped = textwrap.fill(visible, width=70, subsequent_indent="  ")
-                print(f"\n  K-4SH: {wrapped}")
+                wrapped = textwrap.fill(
+                    visible,
+                    width=68,
+                    initial_indent="  K-4SH: ",
+                    subsequent_indent="          ",
+                )
+                print(f"\n{wrapped}")
             # Prefer decision captured from append_trade_log args over text parsing
             if _log_decision:
                 ticker = _log_ticker.upper() if _log_ticker and _log_ticker != "NONE" else None
@@ -148,7 +153,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 try:
                     fn_args = json.loads(fn_args)
                 except Exception:
-                    print(f"  [K-4SH] Could not parse args for {fn_name}: {fn_args!r}")
+                    print(f"  ! Could not parse args for {fn_name}: {fn_args!r}")
                     fn_args = {}
             # Unwrap nested {"arguments": {...}} if the model double-wrapped them
             if isinstance(fn_args, dict) and list(fn_args.keys()) == ["arguments"]:
@@ -248,9 +253,11 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 messages.append({
                     "role": "user",
                     "content": (
-                        f"[budget] 12 tool calls used. Stop gathering data. {portfolio_note} "
-                        "Call append_trade_log with your decision, then update_ticker_page, "
-                        "then output: DECISION: BUY <TICKER> or DECISION: STAND_ASIDE."
+                        f"[budget] STOP RESEARCHING. {portfolio_note} "
+                        "You must now: (1) call append_trade_log with your decision, "
+                        "(2) call update_ticker_page, "
+                        "(3) output your final text: DECISION: BUY <TICKER> or DECISION: STAND_ASIDE "
+                        "followed by RATIONALE and BIGGEST_RISK. No more tool calls after that."
                     )
                 })
 
