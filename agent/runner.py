@@ -128,28 +128,28 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             if fn_name == "append_trade_log":
                 wiki_written = True
 
-            # Block repeated one-time tools and tell the model to move on
+            # Return a warning as the tool result for repeated one-time tools
             if fn_name in _once_only and fn_name in _once_called:
-                messages.append({
-                    "role": "tool",
-                    "content": json.dumps({"warning": f"{fn_name} already called this cycle. Do not call it again. Continue the pipeline."})
-                })
-                tool_calls_total += 1
-                continue
-
-            if fn_name in _once_only:
-                _once_called.add(fn_name)
-
-            result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
+                result = {"warning": f"{fn_name} already called this cycle. Proceed — do not call it again."}
+            else:
+                if fn_name in _once_only:
+                    _once_called.add(fn_name)
+                result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
 
             messages.append({"role": "tool", "content": json.dumps(result)})
             tool_calls_total += 1
 
-            # Inject budget warning when running low
-            if tool_calls_total == max_tool_calls - 5:
+            # Inject a hard "decide now" message when the agent has likely gathered enough data
+            if tool_calls_total == 12:
                 messages.append({
                     "role": "user",
-                    "content": f"[budget] 5 tool calls remaining. Wrap up: make your DECISION, then call append_trade_log and update_ticker_page."
+                    "content": (
+                        "[budget] You have used 12 of 25 tool calls. Stop gathering data now. "
+                        "You have enough information. Output your final decision immediately: "
+                        "DECISION: BUY <TICKER> or DECISION: STAND_ASIDE, "
+                        "followed by RATIONALE and BIGGEST_RISK. "
+                        "Then call append_trade_log and update_ticker_page once each."
+                    )
                 })
 
     return {

@@ -48,10 +48,9 @@ Step 1 — Review open positions first:
   - For each open position, evaluate: has the thesis held? Any deterioration?
   - Call close_position(ticker, reason) if exit criteria are met (see EXIT CRITERIA)
 
-Step 2 — Read your memory:
-  - Call get_recent_trades() to see your recent decisions
+Step 2 — Read your memory (max 2 wiki reads total):
   - Call list_wiki_pages() to see what ticker pages exist
-  - If a promising ticker has a page, call read_wiki_page("tickers/TICKER") first
+  - Read at most 1-2 pages — only if a ticker you're investigating has history
 
 Step 3 — Discover and gather:
   - get_market_conditions() — macro first, always
