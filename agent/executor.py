@@ -1,6 +1,8 @@
 # agent/executor.py
 # Buy guard rails and wiki fallback. Extracted from agent_loop.py.
 
+import re
+
 from alpaca_mcp.data import get_market_conditions, get_market_snapshot
 from alpaca_mcp.execution import get_portfolio_state, place_order
 from alpaca_mcp.signals import compute_score
@@ -14,6 +16,11 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
     Returns:
         {"status": "SUBMITTED"|"DRY_RUN"|"BLOCKED"|"FAILED", ...}
     """
+    if not re.match(r"^[A-Z]{1,5}$", ticker.upper().strip()):
+        print(f"  ✗ BLOCKED: '{ticker}' is not a valid ticker symbol")
+        return {"status": "BLOCKED", "reason": f"invalid ticker: {ticker}"}
+
+    ticker = ticker.upper().strip()
     snap = get_market_snapshot(ticker)
     live_price = snap.get("price")
     if not live_price:

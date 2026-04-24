@@ -138,10 +138,15 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 print(f"\n{wrapped}")
             # Prefer decision captured from append_trade_log args over text parsing
             if _log_decision:
-                ticker = _log_ticker.upper() if _log_ticker and _log_ticker != "NONE" else None
+                raw_ticker = (_log_ticker or "").upper().strip()
+                # Validate ticker is a real symbol (1-5 uppercase letters only)
+                valid_ticker = raw_ticker if re.match(r"^[A-Z]{1,5}$", raw_ticker) else None
+                if _log_decision == "BUY" and not valid_ticker:
+                    print(f"  ! invalid ticker '{raw_ticker}' — downgrading to STAND_ASIDE")
+                    _log_decision = "STAND_ASIDE"
                 return {
                     "decision": _log_decision,
-                    "ticker": ticker if _log_decision == "BUY" else None,
+                    "ticker": valid_ticker if _log_decision == "BUY" else None,
                     "rationale": _log_rationale or "",
                     "risk": _log_risk or "",
                     "_wiki_written": wiki_written,
