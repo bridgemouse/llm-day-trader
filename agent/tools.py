@@ -295,6 +295,14 @@ TOOLS = [
 _macro_cache: dict | None = None
 
 
+def _safe_call(fn):
+    """Wrap a function call to prevent exceptions from crashing the Ollama loop."""
+    try:
+        return fn()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def _tool_get_portfolio_state() -> dict:
     result = get_portfolio_state()
     result["realized_pnl_total"] = get_realized_pnl_total()
@@ -318,12 +326,18 @@ def _tool_close_position(ticker: str, reason: str) -> dict:
     if exec_result.get("error"):
         return exec_result
 
-    snap = get_market_snapshot(ticker.upper())
-    exit_price = snap.get("price", entry_price)
+    try:
+        snap = get_market_snapshot(ticker.upper())
+        exit_price = snap.get("price", entry_price)
+    except Exception:
+        exit_price = entry_price
     pnl_usd = round((exit_price - entry_price) * qty, 2)
     pnl_pct = round((exit_price - entry_price) / entry_price * 100, 2) if entry_price else 0.0
 
-    close_position_wiki(ticker, exit_price, pnl_usd, pnl_pct, reason)
+    try:
+        close_position_wiki(ticker, exit_price, pnl_usd, pnl_pct, reason)
+    except Exception:
+        pass  # best effort — sell already executed
 
     return {**exec_result, "pnl_usd": pnl_usd, "pnl_pct": pnl_pct, "exit_price": exit_price}
 
@@ -340,14 +354,14 @@ def _tool_scan_signals(top_n: int = 10) -> list[dict]:
     ranked = scan_and_rank(macro)
     return [
         {
-            "ticker": r["ticker"],
-            "score": r["score"],
-            "threshold": r["threshold"],
-            "signal": r["signal"],
-            "regime": r["regime"],
-            "rsi": r["rsi"],
-            "ret_5d_pct": r["ret_5d_pct"],
-            "macd_signal": r["macd_signal"],
+            "ticker": r.get("ticker", ""),
+            "score": r.get("score", 0),
+            "threshold": r.get("threshold", 0),
+            "signal": r.get("signal", ""),
+            "regime": r.get("regime", ""),
+            "rsi": r.get("rsi", 0),
+            "ret_5d_pct": r.get("ret_5d_pct", 0),
+            "macd_signal": r.get("macd_signal", ""),
         }
         for r in ranked[:top_n]
     ]
@@ -420,10 +434,10 @@ TOOL_MAP = {
     "get_signal_score":       lambda args: _tool_get_signal_score(**args),
     "get_polymarket_context": lambda args: _tool_get_polymarket_context(),
     "search_web":             lambda args: _tool_search_web(**args),
-    "list_wiki_pages":        lambda args: list_wiki_pages(),
-    "read_wiki_page":         lambda args: read_wiki_page(**args),
-    "get_recent_trades":      lambda args: get_recent_trades(**args),
-    "search_wiki":            lambda args: search_wiki(**args),
-    "append_trade_log":       lambda args: append_trade_log(**args),
-    "update_ticker_page":     lambda args: update_ticker_page(**args),
+    "list_wiki_pages":        lambda args: _safe_call(list_wiki_pages),
+    "read_wiki_page":         lambda args: _safe_call(lambda: read_wiki_page(**args)),
+    "get_recent_trades":      lambda args: _safe_call(lambda: get_recent_trades(**args)),
+    "search_wiki":            lambda args: _safe_call(lambda: search_wiki(**args)),
+    "append_trade_log":       lambda args: _safe_call(lambda: append_trade_log(**args)),
+    "update_ticker_page":     lambda args: _safe_call(lambda: update_ticker_page(**args)),
 }
