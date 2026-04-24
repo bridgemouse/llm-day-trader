@@ -39,7 +39,7 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    if ticker.upper() in existing:
+    if ticker.upper() in [s.upper() for s in existing if s]:
         msg = f"Already holding {ticker}"
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
@@ -63,7 +63,7 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
         return {"status": "DRY_RUN", "qty": qty, "ticker": ticker, "price": live_price}
 
     order_result = place_order(ticker, "buy", qty, limit_price=live_price)
-    if order_result.get("error"):
+    if not order_result or order_result.get("error"):
         print(f"  ✗ FAILED: {order_result['error']}")
         return {"status": "FAILED", "reason": order_result["error"]}
 
@@ -98,7 +98,7 @@ def wiki_fallback(result: dict) -> None:
     print("  [wiki fallback] agent skipped wiki write — recording automatically")
     append_trade_log(
         ticker=ticker,
-        decision=result["decision"],
+        decision=result.get("decision", "STAND_ASIDE"),
         score=scored.get("score", 0),
         regime=scored.get("regime", "unknown"),
         price=price,
@@ -109,7 +109,7 @@ def wiki_fallback(result: dict) -> None:
     )
     update_ticker_page(
         ticker=ticker,
-        decision=result["decision"],
+        decision=result.get("decision", "STAND_ASIDE"),
         score=scored.get("score", 0),
         price=price,
         observation="(auto-recorded — agent did not write observation)",
