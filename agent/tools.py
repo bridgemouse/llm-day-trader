@@ -53,10 +53,16 @@ Step 2 — Read your memory:
   - Call list_wiki_pages() to see what ticker pages exist
   - If a promising ticker has a page, call read_wiki_page("tickers/TICKER") first
 
-Step 3 — Gather live data:
+Step 3 — Discover and gather:
   - get_market_conditions() — macro first, always
-  - scan_signals() — find candidates ranked by score
-  - Investigate top candidates: snapshot, news, signal score, web search as needed
+  - Use search_web() to find candidates — this is your edge. Search for:
+      "stocks breaking out today", "unusual volume premarket", "analyst upgrades today",
+      "sector momentum [sector]", or whatever the macro context suggests.
+    Extract every ticker symbol you encounter across all searches.
+  - scan_signals(tickers=[...]) — pass ALL tickers you discovered. This scores them
+    against technical signals and ranks them. Do not call scan_signals() with no
+    tickers unless search_web returned nothing useful.
+  - Deep-dive the top-ranked candidates: get_market_snapshot(), get_news_sentiment()
   - get_polymarket_context() if a macro event is relevant
 
 Step 4 — Decide:
@@ -120,10 +126,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "scan_signals",
-            "description": "Score all 31 watchlist tickers using deterministic technical signals. Returns top candidates ranked by score.",
+            "description": "Score tickers using deterministic technical signals and return the top candidates ranked by score. Pass a 'tickers' list of symbols you discovered via search — if omitted, falls back to a default watchlist.",
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "tickers": {"type": "array", "items": {"type": "string"}, "description": "Ticker symbols to score, e.g. ['AAPL', 'NVDA', 'TSM']. Discovered via search_web — pass everything worth scoring."},
                     "top_n": {"type": "integer", "description": "How many top results to return (default 10)"}
                 },
                 "required": [],
@@ -349,9 +356,9 @@ def _tool_get_market_conditions() -> dict:
     return result
 
 
-def _tool_scan_signals(top_n: int = 10) -> list[dict]:
+def _tool_scan_signals(tickers: list[str] | None = None, top_n: int = 10) -> list[dict]:
     macro = _macro_cache or get_market_conditions()
-    ranked = scan_and_rank(macro)
+    ranked = scan_and_rank(macro, tickers=tickers or None)
     return [
         {
             "ticker": r.get("ticker", ""),
