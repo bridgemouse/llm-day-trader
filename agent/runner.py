@@ -94,6 +94,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     _searched_queries: set[str] = set()  # prevent duplicate web searches
     _wiki_read_count: int = 0            # cap wiki reads at 3 per cycle
     _web_search_count: int = 0           # cap web searches at 3 per cycle
+    _decision_forced: bool = False       # True after budget nudge — only wiki writes allowed
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -189,6 +190,14 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             # --- Guards (all suppress flavor and short-circuit) ---
 
+            # 0. After budget nudge: only wiki writes are allowed
+            _wiki_writes = {"append_trade_log", "update_ticker_page"}
+            if _decision_forced and fn_name not in _wiki_writes:
+                result = {"warning": "Decision time. Only append_trade_log and update_ticker_page are allowed now."}
+                messages.append({"role": "tool", "content": json.dumps(result)})
+                tool_calls_total += 1
+                continue
+
             # 1. Once-only tools
             if fn_name in _once_only and fn_name in _once_called:
                 result = {"warning": f"{fn_name} already called this cycle. Do not call it again."}
@@ -273,7 +282,8 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             tool_calls_total += 1
 
             # Inject a hard "decide now" message when the agent has likely gathered enough data
-            if tool_calls_total == 15:
+            if tool_calls_total == 12 and not _decision_forced:
+                _decision_forced = True
                 try:
                     pf = _get_portfolio_state()
                     held = [p["ticker"] for p in pf.get("positions", [])]
