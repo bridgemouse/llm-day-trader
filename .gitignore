@@ -3,3 +3,10 @@ venv/
 __pycache__/
 *.pyc
 .agent/
+.claude/
+
+# Runtime wiki — trade logs and ticker state are local, not tracked
+wiki/log.md
+wiki/index.md
+wiki/meta/
+wiki/tickers/*.md
