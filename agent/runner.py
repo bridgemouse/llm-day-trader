@@ -93,6 +93,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     }
     _searched_queries: set[str] = set()  # prevent duplicate web searches
     _wiki_read_count: int = 0            # cap wiki reads at 3 per cycle
+    _web_search_count: int = 0           # cap web searches at 3 per cycle
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -195,15 +196,21 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 tool_calls_total += 1
                 continue
 
-            # 2. Duplicate web searches
+            # 2. Web search cap (max 3 per cycle) + duplicate dedup
             if fn_name == "search_web":
+                if _web_search_count >= 3:
+                    result = {"warning": "Web search limit reached (3 max). Move on to scan_signals and analysis."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
                 q = fn_args.get("query", "").lower().strip()
                 if q in _searched_queries:
-                    result = {"warning": f"Already searched this query. Use a different search term."}
+                    result = {"warning": "Already searched this query. Use a different search term."}
                     messages.append({"role": "tool", "content": json.dumps(result)})
                     tool_calls_total += 1
                     continue
                 _searched_queries.add(q)
+                _web_search_count += 1
 
             # 3. Wiki read cap (max 3 per cycle)
             if fn_name in ("read_wiki_page", "list_wiki_pages", "search_wiki", "get_recent_trades"):
