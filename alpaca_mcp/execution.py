@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest
-from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.trading.enums import OrderSide, TimeInForce, OrderType
 
 load_dotenv()
 
@@ -21,6 +21,12 @@ def _get_client() -> TradingClient:
             paper=True,
         )
     return _trading_client
+
+
+# Guard rails (from wiki strategy constraints)
+MAX_POSITION_PCT = 0.20   # 20% of portfolio per stock
+MAX_OPEN_POSITIONS = 3
+STOP_LOSS_PCT = 0.05       # hard -5% stop loss
 
 
 def _place_stop_loss(client: TradingClient, ticker: str, qty: float, entry_price: float) -> dict:
@@ -45,12 +51,6 @@ def _place_stop_loss(client: TradingClient, ticker: str, qty: float, entry_price
         }
     except Exception as e:
         return {"error": str(e), "stop_price": stop_price}
-
-
-# Guard rails (from wiki strategy constraints)
-MAX_POSITION_PCT = 0.20   # 20% of portfolio per stock
-MAX_OPEN_POSITIONS = 3
-STOP_LOSS_PCT = 0.05       # hard -5% stop loss
 
 
 def get_portfolio_state() -> dict:
@@ -227,7 +227,7 @@ def close_position(ticker: str, reason: str = "") -> dict:
     try:
         open_orders = client.get_orders()
         for o in open_orders:
-            if o.symbol == ticker and o.order_type.value == "stop":
+            if o.symbol == ticker and o.order_type == OrderType.STOP:
                 client.cancel_order_by_id(str(o.id))
     except Exception:
         pass  # best effort
