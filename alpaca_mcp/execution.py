@@ -24,8 +24,8 @@ def _get_client() -> TradingClient:
 
 
 # Guard rails (from wiki strategy constraints)
-MAX_POSITION_PCT = 0.20   # 20% of portfolio per stock
-MAX_OPEN_POSITIONS = 3
+MAX_POSITION_PCT = 0.10   # 10% of portfolio per stock
+MAX_OPEN_POSITIONS = 10
 STOP_LOSS_PCT = 0.05       # hard -5% stop loss
 
 

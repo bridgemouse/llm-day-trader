@@ -36,7 +36,7 @@ from alpaca_mcp.wiki import get_realized_pnl_total
 load_dotenv()
 
 ET = ZoneInfo("America/New_York")
-CYCLE_INTERVAL_MIN = 45
+CYCLE_INTERVAL_MIN = 15
 DRY_RUN = "--dry-run" in sys.argv
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")

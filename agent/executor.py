@@ -32,8 +32,8 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
 
     print(f"  Portfolio: ${cash:,.2f} cash | {open_positions} open | holdings: {existing or 'none'}")
 
-    if open_positions >= 3:
-        msg = f"Max positions reached ({open_positions}/3)"
+    if open_positions >= 10:
+        msg = f"Max positions reached ({open_positions}/10)"
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
@@ -42,7 +42,7 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    invest_amount = portfolio_value * 0.19
+    invest_amount = portfolio_value * 0.08
     if cash < invest_amount:
         msg = f"Insufficient cash: need ${invest_amount:,.2f}, have ${cash:,.2f}"
         print(f"  ✗ BLOCKED: {msg}")
