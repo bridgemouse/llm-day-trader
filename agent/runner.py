@@ -68,9 +68,19 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             "think": True,
         }
 
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=180)
-        resp.raise_for_status()
-        data = resp.json()
+        try:
+            resp = requests.post(OLLAMA_URL, json=payload, timeout=180)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            print(f"  [K-4SH] Ollama request failed: {e}")
+            return {
+                "decision": "STAND_ASIDE",
+                "ticker": None,
+                "rationale": f"Ollama request failed: {e}",
+                "risk": "",
+                "_wiki_written": wiki_written,
+            }
         msg = data["message"]
 
         content = msg.get("content", "") or ""
@@ -91,6 +101,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 try:
                     fn_args = json.loads(fn_args)
                 except Exception:
+                    print(f"  [K-4SH] Could not parse args for {fn_name}: {fn_args!r}")
                     fn_args = {}
 
             # Phase flavor
