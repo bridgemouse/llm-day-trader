@@ -93,6 +93,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
         "close_position",
     }
     _searched_queries: set[str] = set()  # prevent duplicate web searches
+    _wiki_read_count: int = 0            # cap wiki reads at 3 per cycle
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -159,13 +160,45 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                         inner = {}
                 fn_args = inner if isinstance(inner, dict) else {}
 
-            # Return a warning as the tool result for repeated one-time tools (suppress flavor too)
+            # --- Guards (all suppress flavor and short-circuit) ---
+
+            # 1. Once-only tools
             if fn_name in _once_only and fn_name in _once_called:
                 result = {"warning": f"{fn_name} already called this cycle. Do not call it again."}
                 messages.append({"role": "tool", "content": json.dumps(result)})
                 tool_calls_total += 1
                 continue
-            # Phase flavor (only for calls that will actually execute)
+
+            # 2. Duplicate web searches
+            if fn_name == "search_web":
+                q = fn_args.get("query", "").lower().strip()
+                if q in _searched_queries:
+                    result = {"warning": f"Already searched this query. Use a different search term."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
+                _searched_queries.add(q)
+
+            # 3. Wiki read cap (max 3 per cycle)
+            if fn_name in ("read_wiki_page", "list_wiki_pages", "search_wiki", "get_recent_trades"):
+                if _wiki_read_count >= 3:
+                    result = {"warning": "Wiki read limit reached for this cycle. Make your decision."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
+                _wiki_read_count += 1
+
+            # 4. Hard block BUY on held ticker at wiki-write time
+            if fn_name == "append_trade_log":
+                log_dec = fn_args.get("decision", "").upper()
+                log_tkr = (fn_args.get("ticker") or "").upper()
+                if log_dec == "BUY" and log_tkr in _held:
+                    result = {"error": f"Cannot log BUY {log_tkr} — you already hold it. Change decision to STAND_ASIDE or pick a different ticker."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
+
+            # --- Phase flavor (only shown for calls that will execute) ---
             phase = _TOOL_PHASE.get(fn_name, fn_name)
             ticker = fn_args.get("ticker", "")
             query = fn_args.get("query", "")
@@ -173,15 +206,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             if fn_name in _once_only:
                 _once_called.add(fn_name)
-            # Block duplicate web searches
-            if fn_name == "search_web":
-                q = fn_args.get("query", "").lower().strip()
-                if q in _searched_queries:
-                    result = {"warning": f"Already searched '{fn_args.get('query')}' this cycle. Use a different query or move on."}
-                    messages.append({"role": "tool", "content": json.dumps(result)})
-                    tool_calls_total += 1
-                    continue
-                _searched_queries.add(q)
+
             result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
             # Capture decision from first (real) append_trade_log call only
             if fn_name == "append_trade_log":
