@@ -33,23 +33,83 @@ def get_idle_prompt(minutes: int | None = None) -> str:
 
 
 # ── Phase flavor (shown while tools are executing) ─────────────────────────────
-_PHASE_FLAVOR = {
-    "wiki":     "📖 Cross-referencing the Jocasta Nu archives...",
-    "macro":    "🌍 Scanning the galaxy for macro disturbances...",
-    "scan":     "🔍 Running analysis. The Bothans are already watching.",
-    "snapshot": "🔎 Zooming in on {ticker}. Like Vader — focused, intense.",
-    "news":     "📰 Intercepting HoloNet transmissions on {ticker}...",
-    "score":    "🎰 Consulting the Jedha oracle...",
-    "web":      "🌐 Dispatching probe droids: '{query}'...",
-    "report":   "✍️  Filing the after-action report. Fulcrum would approve.",
-    "sell":     "⚔️  Closing {ticker}. The Mandalorian does not hesitate.",
-    "portfolio":"📊 Reviewing the manifest. Every credit accounted for.",
+_PHASE_FLAVOR: dict[str, list[str]] = {
+    "wiki": [
+        "📖 Cross-referencing the Jocasta Nu archives...",
+        "📖 Consulting the holocron. Jocasta Nu would be proud.",
+        "📖 Pulling the scrolls. Every trade leaves a record.",
+        "📖 Digging through the stacks. The archives never lie.",
+    ],
+    "macro": [
+        "🌍 Scanning the galaxy for macro disturbances...",
+        "🌍 Reading the currents. The Force flows through the tape.",
+        "🌍 Checking the weather on Coruscant. VIX is the wind.",
+        "🌍 Macro conditions incoming. Strap in.",
+    ],
+    "scan": [
+        "🔍 Running analysis. The Bothans are already watching.",
+        "🔍 Scoring the field. Many tickers. Few worthy.",
+        "🔍 Signal sweep active. Looking for a clean setup.",
+        "🔍 The Bothan network reports. Casualties: several bad tickers.",
+    ],
+    "snapshot": [
+        "🔎 Zooming in on {ticker}. Like Vader — focused, intense.",
+        "🔎 Pulling the tape on {ticker}. Every candle tells a story.",
+        "🔎 {ticker} under the scope. No chart escapes K-4SH.",
+        "🔎 Locking onto {ticker}. Target acquired.",
+        "🔎 Running diagnostics on {ticker}. This is what I was built for.",
+    ],
+    "news": [
+        "📰 Intercepting HoloNet transmissions on {ticker}...",
+        "📰 Scanning the HoloNet for {ticker} chatter...",
+        "📰 What are they saying about {ticker} out there?",
+        "📰 News sweep on {ticker}. Propaganda filtered. Signal extracted.",
+    ],
+    "score": [
+        "🎰 Consulting the Jedha oracle...",
+        "🎰 Running the numbers. The kyber crystal doesn't lie.",
+        "🎰 Factor breakdown incoming. This is where it gets interesting.",
+        "🎰 Checking the signal score. Conviction must be earned.",
+    ],
+    "web": [
+        "🌐 Dispatching probe droids: '{query}'...",
+        "🌐 Probe droid away. Query: '{query}'",
+        "🌐 Searching the outer rim for: '{query}'...",
+        "🌐 The HoloNet has answers. Asking about '{query}'...",
+    ],
+    "report": [
+        "✍️  Filing the after-action report. Fulcrum would approve.",
+        "✍️  Logging the decision. The record must be maintained.",
+        "✍️  Committing to the archives. K-4SH documents everything.",
+        "✍️  Writing it up. Future K-4SH will want to know.",
+    ],
+    "sell": [
+        "⚔️  Closing {ticker}. The Mandalorian does not hesitate.",
+        "⚔️  Exiting {ticker}. This is the way.",
+        "⚔️  Cutting {ticker}. Discipline over attachment.",
+        "⚔️  {ticker} position closed. Credits secured or losses contained.",
+    ],
+    "portfolio": [
+        "📊 Reviewing the manifest. Every credit accounted for.",
+        "📊 Checking the ledger. K-4SH trusts numbers, not feelings.",
+        "📊 Portfolio state loaded. Positions confirmed.",
+        "📊 Auditing the hold. What do we have, what do we owe.",
+    ],
+}
+
+# Per-phase cycling iterators — each phase rotates independently
+_phase_cycles: dict[str, itertools.cycle] = {
+    phase: itertools.cycle(random.sample(lines, len(lines)))
+    for phase, lines in _PHASE_FLAVOR.items()
 }
 
 
 def get_phase_flavor(phase: str, ticker: str = "", query: str = "") -> str:
-    """Return phase flavor text, interpolating ticker/query where applicable."""
-    template = _PHASE_FLAVOR.get(phase, f"⚙️  Processing {phase}...")
+    """Return the next rotating flavor line for this phase, interpolating ticker/query."""
+    if phase in _phase_cycles:
+        template = next(_phase_cycles[phase])
+    else:
+        template = f"⚙️  Processing {phase}..."
     return template.format(ticker=ticker, query=query)
 
 
