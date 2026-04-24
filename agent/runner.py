@@ -158,26 +158,28 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                         inner = {}
                 fn_args = inner if isinstance(inner, dict) else {}
 
-            # Phase flavor
+            # Return a warning as the tool result for repeated one-time tools (suppress flavor too)
+            if fn_name in _once_only and fn_name in _once_called:
+                result = {"warning": f"{fn_name} already called this cycle. Do not call it again."}
+                messages.append({"role": "tool", "content": json.dumps(result)})
+                tool_calls_total += 1
+                continue
+            # Phase flavor (only for calls that will actually execute)
             phase = _TOOL_PHASE.get(fn_name, fn_name)
             ticker = fn_args.get("ticker", "")
             query = fn_args.get("query", "")
             print(f"  {get_phase_flavor(phase, ticker=ticker, query=query)}")
 
-            # Return a warning as the tool result for repeated one-time tools
-            if fn_name in _once_only and fn_name in _once_called:
-                result = {"warning": f"{fn_name} already called this cycle. Do not call it again."}
-            else:
-                if fn_name in _once_only:
-                    _once_called.add(fn_name)
-                result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
-                # Capture decision from first (real) append_trade_log call only
-                if fn_name == "append_trade_log":
-                    wiki_written = True
-                    _log_decision = fn_args.get("decision", "STAND_ASIDE").upper()
-                    _log_ticker = fn_args.get("ticker") or None
-                    _log_rationale = fn_args.get("rationale", "")
-                    _log_risk = fn_args.get("biggest_risk", "")
+            if fn_name in _once_only:
+                _once_called.add(fn_name)
+            result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
+            # Capture decision from first (real) append_trade_log call only
+            if fn_name == "append_trade_log":
+                wiki_written = True
+                _log_decision = fn_args.get("decision", "STAND_ASIDE").upper()
+                _log_ticker = fn_args.get("ticker") or None
+                _log_rationale = fn_args.get("rationale", "")
+                _log_risk = fn_args.get("biggest_risk", "")
 
             messages.append({"role": "tool", "content": json.dumps(result)})
             tool_calls_total += 1
@@ -188,10 +190,13 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                     pf = _get_portfolio_state()
                     held = [p["ticker"] for p in pf.get("positions", [])]
                     slots = pf.get("max_positions_allowed", 3) - pf.get("open_positions", 0)
-                    portfolio_note = (
-                        f"Currently holding: {held if held else 'nothing'}. "
-                        f"Open slots: {slots}. Do NOT buy any ticker you are already holding."
-                    )
+                    if held:
+                        portfolio_note = (
+                            f"You hold: {', '.join(held)}. These are your ONLY open positions. "
+                            f"Do NOT close tickers you don't hold. Open slots: {slots}."
+                        )
+                    else:
+                        portfolio_note = "You have no open positions. Open slots: 3."
                 except Exception:
                     portfolio_note = ""
                 messages.append({
