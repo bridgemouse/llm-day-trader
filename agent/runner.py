@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from agent.flavor import get_phase_flavor
 from agent.tools import TOOLS, TOOL_MAP, SYSTEM_PROMPT
+from alpaca_mcp.execution import get_portfolio_state as _get_portfolio_state
 
 load_dotenv()
 
@@ -149,34 +150,42 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             query = fn_args.get("query", "")
             print(f"  {get_phase_flavor(phase, ticker=ticker, query=query)}")
 
-            if fn_name == "append_trade_log":
-                wiki_written = True
-                _log_decision = fn_args.get("decision", "STAND_ASIDE").upper()
-                _log_ticker = fn_args.get("ticker") or None
-                _log_rationale = fn_args.get("rationale", "")
-                _log_risk = fn_args.get("biggest_risk", "")
-
             # Return a warning as the tool result for repeated one-time tools
             if fn_name in _once_only and fn_name in _once_called:
-                result = {"warning": f"{fn_name} already called this cycle. Proceed — do not call it again."}
+                result = {"warning": f"{fn_name} already called this cycle. Do not call it again."}
             else:
                 if fn_name in _once_only:
                     _once_called.add(fn_name)
                 result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
+                # Capture decision from first (real) append_trade_log call only
+                if fn_name == "append_trade_log":
+                    wiki_written = True
+                    _log_decision = fn_args.get("decision", "STAND_ASIDE").upper()
+                    _log_ticker = fn_args.get("ticker") or None
+                    _log_rationale = fn_args.get("rationale", "")
+                    _log_risk = fn_args.get("biggest_risk", "")
 
             messages.append({"role": "tool", "content": json.dumps(result)})
             tool_calls_total += 1
 
             # Inject a hard "decide now" message when the agent has likely gathered enough data
             if tool_calls_total == 12:
+                try:
+                    pf = _get_portfolio_state()
+                    held = [p["ticker"] for p in pf.get("positions", [])]
+                    slots = pf.get("max_positions_allowed", 3) - pf.get("open_positions", 0)
+                    portfolio_note = (
+                        f"Currently holding: {held if held else 'nothing'}. "
+                        f"Open slots: {slots}. Do NOT buy any ticker you are already holding."
+                    )
+                except Exception:
+                    portfolio_note = ""
                 messages.append({
                     "role": "user",
                     "content": (
-                        "[budget] You have used 12 of 25 tool calls. Stop gathering data now. "
-                        "You have enough information. Output your final decision immediately: "
-                        "DECISION: BUY <TICKER> or DECISION: STAND_ASIDE, "
-                        "followed by RATIONALE and BIGGEST_RISK. "
-                        "Then call append_trade_log and update_ticker_page once each."
+                        f"[budget] 12 tool calls used. Stop gathering data. {portfolio_note} "
+                        "Call append_trade_log with your decision, then update_ticker_page, "
+                        "then output: DECISION: BUY <TICKER> or DECISION: STAND_ASIDE."
                     )
                 })
 
