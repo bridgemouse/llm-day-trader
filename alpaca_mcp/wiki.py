@@ -91,11 +91,11 @@ def get_realized_pnl_total() -> float:
     if not perf_path.exists():
         return 0.0
     content = perf_path.read_text()
-    m = re.search(r"## Realized P&L\n- Total: ([+-]?\$[0-9,.]+)", content)
+    m = re.search(r"## Realized P&L\n- Total: ([+-]?\$-?[0-9,.]+)", content)
     if not m:
         return 0.0
     try:
-        raw = m.group(1).lstrip("+").replace("$", "").replace(",", "")
+        raw = m.group(1).replace("$", "").replace(",", "").replace("+", "")
         return float(raw)
     except ValueError:
         return 0.0
@@ -258,14 +258,15 @@ def _update_realized_pnl(pnl_usd: float) -> None:
 
     content = perf_path.read_text()
 
-    # Parse current total
-    m = re.search(r"(## Realized P&L\n- Total: )[+-]?\$([0-9,.]+)", content)
+    # Parse current total — handles both "+$X.XX" and "$-X.XX" formats
+    m = re.search(r"(## Realized P&L\n- Total: )([+-]?\$-?[0-9,.]+)", content)
     if not m:
         return
-    current = float(m.group(2).replace(",", ""))
+    raw = m.group(2).replace("$", "").replace(",", "").replace("+", "")
+    current = float(raw)
     new_total = current + pnl_usd
-    sign = "+" if new_total >= 0 else ""
-    content = content[:m.start(1)] + f"## Realized P&L\n- Total: {sign}${new_total:.2f}" + content[m.end():]
+    sign = "+" if new_total >= 0 else "-"
+    content = content[:m.start(1)] + f"## Realized P&L\n- Total: {sign}${abs(new_total):.2f}" + content[m.end():]
 
     # Update win/loss counts
     win_label = "Wins" if pnl_usd >= 0 else "Losses"

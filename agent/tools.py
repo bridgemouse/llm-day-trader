@@ -87,8 +87,9 @@ Step 4 — Log and decide (strict order — do not skip):
 
 == RULES ==
 - Do not skip Steps 1, 2, and 5 — memory only works if you use it
-- Do not buy, deep-dive, or close a ticker you already hold — find something new
-- Never close a position in order to rebuy it
+- Do not BUY a ticker you already hold — find something new
+- Never close a position in order to immediately rebuy it
+- When calling close_position, give a real reason (e.g. "MACD bearish cross", "hit +2% profit target", "broke SMA20") — not "STAND_ASIDE"
 - Do not buy if macro is clearly bearish (downtrend + high_fear)
 - An unrealized gain is not a credit. Close it to count it.
 - Max 10 open positions, 8% of portfolio per trade (~$8k)
