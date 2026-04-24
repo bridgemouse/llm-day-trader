@@ -123,7 +123,8 @@ def append_trade_log(
     log_path = WIKI_DIR / "log.md"
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    ticker_display = ticker if ticker and ticker != "NONE" else ""
+    _non_tickers = {"NONE", "STAND_ASIDE", "N/A", "NA", "", "NULL"}
+    ticker_display = ticker.upper() if ticker and ticker.upper() not in _non_tickers else ""
     entry = f"""
 ## [{date_str}] {decision}{" " + ticker_display if ticker_display else ""}
 - **Score:** {score:+.0f}
@@ -164,6 +165,9 @@ def update_ticker_page(
     observation is freeform — write what you genuinely noticed. This compounds over time.
     """
     ticker = ticker.upper()
+    _non_tickers = {"NONE", "STAND_ASIDE", "N/A", "NA", "", "NULL"}
+    if ticker in _non_tickers:
+        return {"status": "skipped", "reason": "no valid ticker for STAND_ASIDE"}
     page_path = WIKI_DIR / "tickers" / f"{ticker}.md"
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
