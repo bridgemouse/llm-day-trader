@@ -2,8 +2,8 @@
 
 ## Summary
 - Total decisions: 2
-- Buys: 2
-- Passes: 0
+- Buys: 1 (UNH, held open)
+- Passes: 1
 - Win rate: —
 - Total P&L: $0.00
 
@@ -20,7 +20,5 @@
 ## Trade History
 | Date | Ticker | Decision | Score | Regime | Price | Outcome |
 |------|--------|----------|-------|--------|-------|---------|
-
-| 2026-04-23 | JPM | BUY | +4 | mixed | $313.32 | — |
-
-| 2026-04-23 | AAPL | BUY | +4 | mixed | $273.21 | — |
+| 2026-04-22 | UNH | BUY | — | — | $354.08 | open (-0.45%) |
+| 2026-04-24 | JPM | STAND_ASIDE | +4 | mixed | $310.14 | — |

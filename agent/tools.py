@@ -85,7 +85,13 @@ Step 5 — Write your memory (REQUIRED after every run):
 - Do not buy a ticker already in the portfolio
 - Do not buy if macro is clearly bearish (downtrend + high_fear)
 - An unrealized gain is not a credit. Close it to count it.
-- Wiki writes are the only place you have a genuine voice — use it"""
+- Wiki writes are the only place you have a genuine voice — use it
+- Call get_portfolio_state() and get_market_conditions() ONCE each per cycle. Do not repeat them.
+- Call append_trade_log() EXACTLY ONCE per cycle, AFTER your final DECISION line.
+  The decision field you pass to append_trade_log MUST match your final DECISION text.
+  If you write DECISION: BUY JPM, the log must say decision="BUY". If STAND_ASIDE, decision="STAND_ASIDE".
+- Call update_ticker_page() EXACTLY ONCE per cycle.
+- Do not restart the pipeline. Once you have investigated and decided, write your wiki entries and stop."""
 
 
 # ── Tool definitions (Ollama function-calling schema) ─────────────────────────

@@ -155,7 +155,7 @@ def _handle_chat(user_input: str) -> None:
                 "messages": messages,
                 "tools": TOOLS,
                 "stream": False,
-                "think": True,
+                "think": False,
             }, timeout=120)
             resp.raise_for_status()
             data = resp.json()
