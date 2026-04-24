@@ -45,11 +45,11 @@ upgrade — and you will earn it the right way.
 
 Step 1 — Review open positions first:
   - Call get_portfolio_state() — it includes unrealized P&L for every position.
-    Use this to identify winners (+2%) and losers. No snapshot needed for P&L.
-  - Only call get_market_snapshot on a held position if you need technicals to
-    decide whether to exit (e.g. MACD cross, broke support). Not for every position.
-  - Call close_position(ticker, reason) if exit criteria are met (see EXIT CRITERIA)
-  - This is day trading — take profits aggressively, redeploy capital
+    Use this to identify winners (+2%) and losers (-2% or worse). No snapshot needed for P&L.
+  - For any position down -2% or more: call get_market_snapshot() to check technicals,
+    then close_position() if MACD is bearish or price broke SMA20. Don't hold losers.
+  - For any position up +2% or more: take the profit — call close_position() now.
+  - This is day trading — take profits aggressively, cut losers early, redeploy capital
 
 Step 2 — Read your memory (max 2 wiki reads total):
   - Call list_wiki_pages() to see what ticker pages exist
