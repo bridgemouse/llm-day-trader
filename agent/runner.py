@@ -53,10 +53,19 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             "_wiki_written": bool,
         }
     """
+    # Front-load current holdings so the model can't ignore the constraint
+    try:
+        _pf = _get_portfolio_state()
+        _held = [p["ticker"] for p in _pf.get("positions", [])]
+    except Exception:
+        _held = []
+
     user_msg = (
         "Run the trading pipeline. Decide whether to buy a stock today or stand aside. "
         "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text."
     )
+    if _held:
+        user_msg += f" IMPORTANT: You currently hold {', '.join(_held)}. Do NOT buy these tickers — they are already in the portfolio."
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
 
