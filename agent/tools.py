@@ -388,7 +388,7 @@ def _tool_get_market_conditions() -> dict:
     return result
 
 
-def _tool_scan_signals(tickers: list[str] | None = None, top_n: int = 10) -> list[dict]:
+def _tool_scan_signals(tickers: list[str] | None = None, top_n: int = 10, **_) -> list[dict]:
     macro = _macro_cache or get_market_conditions()
     ranked = scan_and_rank(macro, tickers=tickers or None)
     return [
@@ -426,11 +426,11 @@ def _tool_get_market_snapshot(ticker: str) -> dict:
     return result
 
 
-def _tool_get_indicators(ticker: str, indicators: list[str]) -> dict:
+def _tool_get_indicators(ticker: str, indicators: list[str], **_) -> dict:
     return get_indicators(ticker.upper(), indicators)
 
 
-def _tool_get_news_sentiment(ticker: str, days: int = 7) -> dict:
+def _tool_get_news_sentiment(ticker: str, days: int = 7, **_) -> dict:
     return get_news_sentiment(ticker.upper(), days)
 
 
@@ -472,7 +472,7 @@ def _tool_get_polymarket_context() -> list[dict]:
         return [{"error": str(e)}]
 
 
-def _tool_search_web(query: str, max_results: int = 5) -> list[dict]:
+def _tool_search_web(query: str, max_results: int = 5, **_) -> list[dict]:
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
