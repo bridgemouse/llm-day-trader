@@ -5,6 +5,7 @@
 import json
 import os
 import re
+import textwrap
 
 import requests
 from dotenv import load_dotenv
@@ -53,7 +54,9 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     """
     user_msg = (
         "Run the trading pipeline. Decide whether to buy a stock today or stand aside. "
-        "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text."
+        "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text. "
+        "You have 25 tool calls total. Budget them: 1 portfolio, 1 macro, 3-4 web searches, "
+        "1 scan, 2-3 deep dives, 2 wiki writes. Do not restart the pipeline."
     )
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
@@ -64,8 +67,11 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     ]
 
     tool_calls_total = 0
-    max_tool_calls = 40
+    max_tool_calls = 25
     wiki_written = False
+    # Track tools that should only be called once per cycle
+    _once_called: set[str] = set()
+    _once_only = {"get_portfolio_state", "get_market_conditions"}
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -97,7 +103,8 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
         if not tool_calls:
             if visible:
-                print(f"\n  K-4SH: {visible}")
+                wrapped = textwrap.fill(visible, width=70, subsequent_indent="  ")
+                print(f"\n  K-4SH: {wrapped}")
             return _parse_decision(visible, wiki_written=wiki_written)
 
         messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
@@ -121,10 +128,29 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             if fn_name == "append_trade_log":
                 wiki_written = True
 
+            # Block repeated one-time tools and tell the model to move on
+            if fn_name in _once_only and fn_name in _once_called:
+                messages.append({
+                    "role": "tool",
+                    "content": json.dumps({"warning": f"{fn_name} already called this cycle. Do not call it again. Continue the pipeline."})
+                })
+                tool_calls_total += 1
+                continue
+
+            if fn_name in _once_only:
+                _once_called.add(fn_name)
+
             result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
 
             messages.append({"role": "tool", "content": json.dumps(result)})
             tool_calls_total += 1
+
+            # Inject budget warning when running low
+            if tool_calls_total == max_tool_calls - 5:
+                messages.append({
+                    "role": "user",
+                    "content": f"[budget] 5 tool calls remaining. Wrap up: make your DECISION, then call append_trade_log and update_ticker_page."
+                })
 
     return {
         "decision": "STAND_ASIDE",

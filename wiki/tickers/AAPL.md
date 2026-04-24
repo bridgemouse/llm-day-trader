@@ -13,4 +13,4 @@
 
 ## Observations
 
-_2026-04-23:_ Bullish cross 17d ago, SMA convergence, 3.75% 5-day return. Technical setup was clean. Evaluated during broken pre-fix agent run — no order placed. Worth revisiting with fresh evaluation.
+_2026-04-23:_ Bullish MACD cross 17 days ago, SMA convergence, 3.75% 5-day return. Technical setup was clean but no order placed. Worth a fresh evaluation — last seen during a volatile macro session.

@@ -167,7 +167,10 @@ def scan_and_rank(macro: dict, tickers: list[str] | None = None) -> list[dict]:
     candidates = tickers or WHITELIST
     results = []
     for ticker in candidates:
-        result = compute_score(ticker, macro)
+        try:
+            result = compute_score(ticker, macro)
+        except Exception:
+            continue
         if "error" not in result:
             results.append(result)
     results.sort(key=lambda r: r["score"], reverse=True)

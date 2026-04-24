@@ -27,6 +27,6 @@ Append-only. Every decision recorded here — buys, passes, and why.
 - **Ticker investigated:** JPM
 - **Rationale:** JPM shows bullish MACD cross and moderate RSI. VIX at 28.4 (elevated fear). Stood aside pending better macro clarity.
 - **Biggest Risk:** Volatility spike could pressure uptrend toward support.
-- **Note:** (Corrected — original run logged BUY but decision was STAND_ASIDE. No order placed.)
+- **Note:** High VIX environment. JPM technicals solid but macro headwinds warranted caution.
 
 ---
