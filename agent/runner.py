@@ -118,6 +118,15 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 except Exception:
                     print(f"  [K-4SH] Could not parse args for {fn_name}: {fn_args!r}")
                     fn_args = {}
+            # Unwrap nested {"arguments": {...}} if the model double-wrapped them
+            if isinstance(fn_args, dict) and list(fn_args.keys()) == ["arguments"]:
+                inner = fn_args["arguments"]
+                if isinstance(inner, str):
+                    try:
+                        inner = json.loads(inner)
+                    except Exception:
+                        inner = {}
+                fn_args = inner if isinstance(inner, dict) else {}
 
             # Phase flavor
             phase = _TOOL_PHASE.get(fn_name, fn_name)
