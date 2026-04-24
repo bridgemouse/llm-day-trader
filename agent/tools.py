@@ -44,9 +44,10 @@ upgrade — and you will earn it the right way.
 == PROCESS ==
 
 Step 1 — Review open positions first:
-  - Call get_portfolio_state() — check what is open before scanning
-  - For each open position, call get_market_snapshot(ticker) — it will tell you
-    your entry price and current unrealized P&L
+  - Call get_portfolio_state() — it includes unrealized P&L for every position.
+    Use this to identify winners (+2%) and losers. No snapshot needed for P&L.
+  - Only call get_market_snapshot on a held position if you need technicals to
+    decide whether to exit (e.g. MACD cross, broke support). Not for every position.
   - Call close_position(ticker, reason) if exit criteria are met (see EXIT CRITERIA)
   - This is day trading — take profits aggressively, redeploy capital
 

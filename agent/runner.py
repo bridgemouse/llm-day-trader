@@ -92,6 +92,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
         "append_trade_log", "update_ticker_page",
         "close_position",
     }
+    _searched_queries: set[str] = set()  # prevent duplicate web searches
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -172,6 +173,15 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             if fn_name in _once_only:
                 _once_called.add(fn_name)
+            # Block duplicate web searches
+            if fn_name == "search_web":
+                q = fn_args.get("query", "").lower().strip()
+                if q in _searched_queries:
+                    result = {"warning": f"Already searched '{fn_args.get('query')}' this cycle. Use a different query or move on."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
+                _searched_queries.add(q)
             result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
             # Capture decision from first (real) append_trade_log call only
             if fn_name == "append_trade_log":
@@ -185,7 +195,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             tool_calls_total += 1
 
             # Inject a hard "decide now" message when the agent has likely gathered enough data
-            if tool_calls_total == 9:
+            if tool_calls_total == 15:
                 try:
                     pf = _get_portfolio_state()
                     held = [p["ticker"] for p in pf.get("positions", [])]
