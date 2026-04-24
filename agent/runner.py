@@ -51,7 +51,10 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             "_wiki_written": bool,
         }
     """
-    user_msg = "Run the trading pipeline. Decide whether to buy a stock today or stand aside."
+    user_msg = (
+        "Run the trading pipeline. Decide whether to buy a stock today or stand aside. "
+        "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text."
+    )
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
 
@@ -70,7 +73,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             "messages": messages,
             "tools": TOOLS,
             "stream": False,
-            "think": True,
+            "think": False,
         }
 
         try:
