@@ -11,7 +11,13 @@ Append-only. Every decision recorded here — buys, passes, and why.
 - **Qty:** 56
 - **Rationale:** First live paper trade. UNH opened as initial position.
 - **Biggest Risk:** Healthcare sector volatility
-- **Note:** Initial position. Held open.
+- **Note:** Initial position.
+
+## [2026-04-24] CLOSE UNH (manual — operator error)
+- **Exit Price:** ~$352.41
+- **Qty:** 56
+- **P&L:** -$93.52 (-0.47%)
+- **Note:** Operator accidentally sold via UI. Not a K-4SH decision. Position closed involuntarily.
 
 ---
 
