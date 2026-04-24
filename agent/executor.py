@@ -1,8 +1,6 @@
 # agent/executor.py
 # Buy guard rails and wiki fallback. Extracted from agent_loop.py.
 
-import math
-
 from alpaca_mcp.data import get_market_conditions, get_market_snapshot
 from alpaca_mcp.execution import get_portfolio_state, place_order
 from alpaca_mcp.signals import compute_score
@@ -50,13 +48,15 @@ def run_executor(ticker: str, dry_run: bool = False) -> dict:
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    qty = math.floor(invest_amount / live_price)
-    if qty < 1:
-        msg = f"Position too small at ${live_price:.2f}"
+    if invest_amount < 1.00:
+        msg = f"Invest amount ${invest_amount:.2f} below $1.00 minimum"
         print(f"  ✗ BLOCKED: {msg}")
         return {"status": "BLOCKED", "reason": msg}
 
-    print(f"  Submitting: BUY {qty} {ticker} @ ~${live_price:.2f}  (${qty * live_price:,.2f})")
+    qty = round(invest_amount / live_price, 6)
+
+    qty_display = f"{qty:.6f}".rstrip("0").rstrip(".") if qty < 1 else f"{qty:g}"
+    print(f"  Submitting: BUY {qty_display} {ticker} @ ~${live_price:.2f}  (${qty * live_price:,.2f})")
 
     if dry_run:
         print("  [dry-run] order not submitted")

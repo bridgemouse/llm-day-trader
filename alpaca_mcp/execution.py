@@ -150,7 +150,7 @@ def place_order(ticker: str, side: str, qty: float, order_type: str = "market", 
         if price and portfolio_value:
             order_value = price * qty
             if order_value / portfolio_value > MAX_POSITION_PCT:
-                max_qty = int((portfolio_value * MAX_POSITION_PCT) / price)
+                max_qty = round((portfolio_value * MAX_POSITION_PCT) / price, 6)
                 return {
                     "error": f"Guard rail: order would exceed {MAX_POSITION_PCT*100:.0f}% position limit.",
                     "requested_qty": qty,
