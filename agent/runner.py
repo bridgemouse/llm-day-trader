@@ -66,9 +66,9 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     )
     if _held:
         user_msg += (
-            f" CRITICAL: You currently hold {', '.join(_held)}. "
-            f"Do NOT buy, investigate, or close these tickers — find an entirely different stock. "
-            f"Never close a position just to rebuy it."
+            f" You currently hold: {', '.join(_held)}. "
+            f"Do NOT buy more of these — find new tickers. "
+            f"You MAY close held positions if exit criteria are met."
         )
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
@@ -185,7 +185,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             tool_calls_total += 1
 
             # Inject a hard "decide now" message when the agent has likely gathered enough data
-            if tool_calls_total == 12:
+            if tool_calls_total == 9:
                 try:
                     pf = _get_portfolio_state()
                     held = [p["ticker"] for p in pf.get("positions", [])]

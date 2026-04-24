@@ -45,8 +45,10 @@ upgrade — and you will earn it the right way.
 
 Step 1 — Review open positions first:
   - Call get_portfolio_state() — check what is open before scanning
-  - For each open position, evaluate: has the thesis held? Any deterioration?
+  - For each open position, call get_market_snapshot(ticker) — it will tell you
+    your entry price and current unrealized P&L
   - Call close_position(ticker, reason) if exit criteria are met (see EXIT CRITERIA)
+  - This is day trading — take profits aggressively, redeploy capital
 
 Step 2 — Read your memory (max 2 wiki reads total):
   - Call list_wiki_pages() to see what ticker pages exist
@@ -404,7 +406,23 @@ def _tool_scan_signals(tickers: list[str] | None = None, top_n: int = 10) -> lis
 
 
 def _tool_get_market_snapshot(ticker: str) -> dict:
-    return get_market_snapshot(ticker.upper())
+    from alpaca_mcp.execution import get_portfolio_state as _gps
+    result = get_market_snapshot(ticker.upper())
+    try:
+        positions = _gps().get("positions", [])
+        pos = next((p for p in positions if p["ticker"] == ticker.upper()), None)
+        if pos:
+            result["_holding"] = True
+            result["_entry_price"] = pos["avg_entry"]
+            result["_unrealized_pct"] = pos["unrealized_plpc"]
+            result["_note"] = (
+                f"You hold this. Entry ${pos['avg_entry']:.2f}, "
+                f"current {pos['unrealized_plpc']:+.2f}%. "
+                f"Evaluate for EXIT, not entry."
+            )
+    except Exception:
+        pass
+    return result
 
 
 def _tool_get_indicators(ticker: str, indicators: list[str]) -> dict:
