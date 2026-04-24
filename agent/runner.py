@@ -67,9 +67,16 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     tool_calls_total = 0
     max_tool_calls = 25
     wiki_written = False
+    _log_decision: str | None = None   # captured from append_trade_log args
+    _log_ticker: str | None = None
+    _log_rationale: str | None = None
+    _log_risk: str | None = None
     # Track tools that should only be called once per cycle
     _once_called: set[str] = set()
-    _once_only = {"get_portfolio_state", "get_market_conditions"}
+    _once_only = {
+        "get_portfolio_state", "get_market_conditions",
+        "append_trade_log", "update_ticker_page",
+    }
 
     while tool_calls_total < max_tool_calls:
         payload = {
@@ -103,6 +110,16 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
             if visible:
                 wrapped = textwrap.fill(visible, width=70, subsequent_indent="  ")
                 print(f"\n  K-4SH: {wrapped}")
+            # Prefer decision captured from append_trade_log args over text parsing
+            if _log_decision:
+                ticker = _log_ticker.upper() if _log_ticker and _log_ticker != "NONE" else None
+                return {
+                    "decision": _log_decision,
+                    "ticker": ticker if _log_decision == "BUY" else None,
+                    "rationale": _log_rationale or "",
+                    "risk": _log_risk or "",
+                    "_wiki_written": wiki_written,
+                }
             return _parse_decision(visible, wiki_written=wiki_written)
 
         messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
@@ -134,6 +151,10 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             if fn_name == "append_trade_log":
                 wiki_written = True
+                _log_decision = fn_args.get("decision", "STAND_ASIDE").upper()
+                _log_ticker = fn_args.get("ticker") or None
+                _log_rationale = fn_args.get("rationale", "")
+                _log_risk = fn_args.get("biggest_risk", "")
 
             # Return a warning as the tool result for repeated one-time tools
             if fn_name in _once_only and fn_name in _once_called:
