@@ -54,9 +54,7 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     """
     user_msg = (
         "Run the trading pipeline. Decide whether to buy a stock today or stand aside. "
-        "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text. "
-        "You have 25 tool calls total. Budget them: 1 portfolio, 1 macro, 3-4 web searches, "
-        "1 scan, 2-3 deep dives, 2 wiki writes. Do not restart the pipeline."
+        "Begin immediately by calling get_portfolio_state() — your first response must be a tool call, not text."
     )
     if hint_tickers:
         user_msg += f" Focus your investigation on these tickers: {', '.join(hint_tickers)}."
