@@ -53,6 +53,39 @@ def is_market_open() -> bool:
     return dt_time(9, 30) <= t <= dt_time(16, 0)
 
 
+def is_eod_liquidation_window() -> bool:
+    """True between 15:45 and 16:00 ET — time to flatten all positions."""
+    now = datetime.now(ET)
+    if now.weekday() >= 5:
+        return False
+    t = now.time()
+    return dt_time(15, 45) <= t <= dt_time(16, 0)
+
+
+def liquidate_all_positions() -> None:
+    """Market-sell every open position. Called at EOD."""
+    from alpaca_mcp.execution import get_portfolio_state, close_position
+    from alpaca_mcp.wiki import close_position_wiki
+    portfolio = get_portfolio_state()
+    positions = portfolio.get("positions", [])
+    if not positions:
+        print("  [EOD] No open positions to liquidate.")
+        return
+    print(f"\n  ⏰ EOD LIQUIDATION — closing {len(positions)} position(s)")
+    for pos in positions:
+        ticker = pos["ticker"]
+        result = close_position(ticker, "end-of-day liquidation")
+        if result.get("error"):
+            print(f"  ✗ {ticker}: {result['error']}")
+        else:
+            exit_price = pos.get("current_price", pos["avg_entry"])
+            pnl = round((exit_price - pos["avg_entry"]) * pos["qty"], 2)
+            pnl_pct = round((exit_price - pos["avg_entry"]) / pos["avg_entry"] * 100, 2)
+            close_position_wiki(ticker, exit_price, pnl, pnl_pct, "end-of-day liquidation")
+            sign = "+" if pnl >= 0 else ""
+            print(f"  ✓ {ticker} closed  {sign}${pnl:.2f}  ({sign}{pnl_pct:.2f}%)")
+
+
 def seconds_until_market_open() -> int:
     """Return seconds until next 9:30 ET weekday open."""
     now = datetime.now(ET)
@@ -210,6 +243,14 @@ def main():
                 line = _read_with_timeout(min(wait_sec, 300))
                 if line is not None and line.strip():
                     _handle_chat(line.strip())
+                continue
+
+            # EOD liquidation window — flatten everything and wait for close
+            if is_eod_liquidation_window():
+                liquidate_all_positions()
+                print("\n  ⏰ Positions flat. Waiting for market close...")
+                import time as _time
+                _time.sleep(60)
                 continue
 
             # Run trading cycle

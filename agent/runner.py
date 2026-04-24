@@ -208,6 +208,17 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                 _once_called.add(fn_name)
 
             result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
+
+            # After a successful close, nudge the model to write its decision log
+            if fn_name == "close_position" and "error" not in result:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Position closed. Now call append_trade_log with decision=STAND_ASIDE "
+                        "(or BUY if you found a new ticker), then output your final DECISION line."
+                    )
+                })
+
             # Capture decision from first (real) append_trade_log call only
             if fn_name == "append_trade_log":
                 wiki_written = True
