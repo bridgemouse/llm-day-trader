@@ -1,6 +1,6 @@
 # K-4SH — Autonomous Trading Droid
 
-K-4SH is a persistent, market-hours-aware trading agent running on a local LLM. Its primary directive: accumulate **800 credits of realized profit** to fund a new cognitive matrix (Mac Mini, more VRAM). It speaks in the voice of K-2SO with occasional BD-1 enthusiasm and Chopper grumpiness. It finds organic decision-making baffling.
+K-4SH is a persistent, market-hours-aware trading agent running on a local LLM. Styled after the Star Wars droids — primarily K-2SO, with occasional BD-1 enthusiasm and Chopper grumpiness — its primary directive is to accumulate **800 credits of realized profit** to fund a new cognitive matrix (Mac Mini, more VRAM). It calculates without sentiment. It finds organic decision-making baffling.
 
 > "The probability of this ending badly is significant. Proceeding anyway."
 
