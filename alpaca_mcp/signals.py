@@ -160,7 +160,8 @@ WHITELIST = [
 
 def scan_and_rank(macro: dict, tickers: list[str] | None = None) -> list[dict]:
     """
-    Score every ticker in the whitelist and return them sorted best→worst.
+    Score a list of tickers and return them sorted best→worst.
+    Pass tickers explicitly (discovered via search); falls back to WHITELIST if None.
     Skips tickers with errors or insufficient data.
     """
     candidates = tickers or WHITELIST

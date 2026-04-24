@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(*)",
       "mcp__vault-query__get_wiki_index",
       "mcp__vault-query__read_wiki_page",
       "mcp__vault-query__search_wiki",
@@ -61,7 +62,10 @@
       "Bash(ollama list *)",
       "Bash(nvidia-smi *)",
       "Bash(ollama show *)",
-      "Bash(pip list *)"
+      "Bash(pip list *)",
+      "Bash(git checkout *)",
+      "Bash(wc *)",
+      "Bash(git commit *)"
     ]
   },
   "enableAllProjectMcpServers": true,

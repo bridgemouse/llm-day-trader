@@ -13,6 +13,9 @@ from alpaca.data.timeframe import TimeFrame
 from alpaca.data.enums import DataFeed
 from dotenv import load_dotenv
 
+def _data_feed() -> DataFeed:
+    return DataFeed.SIP if os.getenv("ALPACA_DATA_FEED", "iex").lower() == "sip" else DataFeed.IEX
+
 load_dotenv()
 
 _data_client: Optional[StockHistoricalDataClient] = None
@@ -50,7 +53,7 @@ def _fetch_bars(ticker: str, days: int = 60, timeframe: TimeFrame = TimeFrame.Da
         timeframe=timeframe,
         start=start,
         end=end,
-        feed=DataFeed.IEX,
+        feed=_data_feed(),
     )
     bars = client.get_stock_bars(req)
     df = bars.df

@@ -54,7 +54,7 @@ def _fetch_bars(ticker: str, days: int) -> pd.DataFrame:
         timeframe=TimeFrame.Day,
         start=start,
         end=end,
-        feed=DataFeed.IEX,
+        feed=DataFeed.SIP if os.getenv("ALPACA_DATA_FEED", "iex").lower() == "sip" else DataFeed.IEX,
     )
     bars = client.get_stock_bars(req)
     df = bars.df
