@@ -98,7 +98,7 @@ def run_cycle(hint_tickers: list[str]) -> dict:
 
     result = run_agent(hint_tickers or None)
 
-    if not result.get("_wiki_written") and result.get("ticker"):
+    if not result.get("_wiki_written"):
         wiki_fallback(result)
 
     exec_result = {"status": "STAND_ASIDE"}

@@ -88,29 +88,44 @@ def wiki_fallback(result: dict) -> None:
     If the agent forgot to write wiki, auto-record the decision.
     Called from agent_loop.py when _wiki_written is False.
     """
-    ticker = result.get("ticker")
-    if not ticker:
-        return
-    snap = get_market_snapshot(ticker)
-    price = snap.get("price", 0.0)
-    macro = get_market_conditions()
-    scored = compute_score(ticker, macro)
     print("  [wiki fallback] agent skipped wiki write — recording automatically")
+    ticker = result.get("ticker") or "NONE"
+    decision = result.get("decision", "STAND_ASIDE")
+
+    price = 0.0
+    score = 0
+    regime = "unknown"
+
+    if ticker != "NONE":
+        try:
+            snap = get_market_snapshot(ticker)
+            price = snap.get("price", 0.0)
+        except Exception:
+            pass
+        try:
+            macro = get_market_conditions()
+            scored = compute_score(ticker, macro)
+            score = scored.get("score", 0)
+            regime = scored.get("regime", "unknown")
+        except Exception:
+            pass
+
     append_trade_log(
         ticker=ticker,
-        decision=result.get("decision", "STAND_ASIDE"),
-        score=scored.get("score", 0),
-        regime=scored.get("regime", "unknown"),
+        decision=decision,
+        score=score,
+        regime=regime,
         price=price,
         qty=0,
         rationale=result.get("rationale", ""),
         biggest_risk=result.get("risk", ""),
         agent_note="(auto-recorded — agent did not write wiki)",
     )
-    update_ticker_page(
-        ticker=ticker,
-        decision=result.get("decision", "STAND_ASIDE"),
-        score=scored.get("score", 0),
-        price=price,
-        observation="(auto-recorded — agent did not write observation)",
-    )
+    if ticker != "NONE":
+        update_ticker_page(
+            ticker=ticker,
+            decision=decision,
+            score=score,
+            price=price,
+            observation="(auto-recorded — agent did not write observation)",
+        )

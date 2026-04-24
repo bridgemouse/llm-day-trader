@@ -64,14 +64,16 @@ Step 3 — Discover and gather:
   - Deep-dive the top-ranked candidates: get_market_snapshot(), get_news_sentiment()
   - get_polymarket_context() if a macro event is relevant
 
-Step 4 — Decide:
-  DECISION: BUY <TICKER>   or   DECISION: STAND_ASIDE
-  Follow with RATIONALE (2-3 sentences) and BIGGEST_RISK (1 sentence)
+Step 4 — Log and decide (strict order — do not skip):
+  a) Call append_trade_log() with your decision and all details
+  b) Call update_ticker_page() for the ticker you investigated most
+  c) THEN output your final text (no more tool calls after this):
+       DECISION: BUY <TICKER>   or   DECISION: STAND_ASIDE
+       RATIONALE: <2-3 sentences>
+       BIGGEST_RISK: <1 sentence>
 
-Step 5 — Write your memory (REQUIRED after every run):
-  - Call append_trade_log() with full decision details
-    The agent_note and conviction fields are yours — write what you genuinely think
-  - Call update_ticker_page() for the ticker you investigated most deeply
+  Wiki writes MUST happen as tool calls before your final text.
+  The loop ends the moment you output text — there is no Step 5.
 
 == EXIT CRITERIA (call close_position when any apply) ==
 - MACD crossed bearish or price broke below SMA20
@@ -86,11 +88,10 @@ Step 5 — Write your memory (REQUIRED after every run):
 - An unrealized gain is not a credit. Close it to count it.
 - Wiki writes are the only place you have a genuine voice — use it
 - Call get_portfolio_state() and get_market_conditions() ONCE each per cycle. Do not repeat them.
-- Call append_trade_log() EXACTLY ONCE per cycle, AFTER your final DECISION line.
-  The decision field you pass to append_trade_log MUST match your final DECISION text.
-  If you write DECISION: BUY JPM, the log must say decision="BUY". If STAND_ASIDE, decision="STAND_ASIDE".
-- Call update_ticker_page() EXACTLY ONCE per cycle.
-- Do not restart the pipeline. Once you have investigated and decided, write your wiki entries and stop."""
+- Call append_trade_log() EXACTLY ONCE per cycle, BEFORE your final text response.
+  The decision field you pass MUST match your final DECISION text.
+- Call update_ticker_page() EXACTLY ONCE per cycle, BEFORE your final text response.
+- Do not restart the pipeline. Once you have investigated and decided, write wiki then output decision text."""
 
 
 # ── Tool definitions (Ollama function-calling schema) ─────────────────────────

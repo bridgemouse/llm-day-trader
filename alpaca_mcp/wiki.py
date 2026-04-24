@@ -123,9 +123,10 @@ def append_trade_log(
     log_path = WIKI_DIR / "log.md"
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+    ticker_display = ticker if ticker and ticker != "NONE" else ""
     entry = f"""
-## [{date_str}] {decision} {ticker}
-- **Score:** {score:+.0f}/6
+## [{date_str}] {decision}{" " + ticker_display if ticker_display else ""}
+- **Score:** {score:+.0f}
 - **Regime:** {regime}
 - **Price:** ${price:.2f}
 - **Qty:** {qty if decision == "BUY" else "—"}
