@@ -90,7 +90,6 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
     _once_only = {
         "get_portfolio_state", "get_market_conditions",
         "append_trade_log", "update_ticker_page",
-        "close_position",
     }
     _searched_queries: set[str] = set()  # prevent duplicate web searches
     _wiki_read_count: int = 0            # cap wiki reads at 3 per cycle
@@ -193,7 +192,16 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                     continue
                 _wiki_read_count += 1
 
-            # 4. Hard block BUY on held ticker at wiki-write time
+            # 4. Block close_position on tickers not actually held
+            if fn_name == "close_position":
+                close_tkr = (fn_args.get("ticker") or "").upper()
+                if close_tkr and close_tkr not in _held:
+                    result = {"error": f"Cannot close {close_tkr} — you do not hold it. Held: {_held or 'none'}. Do not attempt to close positions you do not own."}
+                    messages.append({"role": "tool", "content": json.dumps(result)})
+                    tool_calls_total += 1
+                    continue
+
+            # 5. Hard block BUY on held ticker at wiki-write time
             if fn_name == "append_trade_log":
                 log_dec = fn_args.get("decision", "").upper()
                 log_tkr = (fn_args.get("ticker") or "").upper()

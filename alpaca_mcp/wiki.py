@@ -295,7 +295,10 @@ def _append_to_table(content: str, row: str) -> str:
     """Append a row just before the ## Observations header."""
     marker = "## Observations"
     if marker in content:
-        return content.replace(marker, f"{row}\n\n{marker}")
+        idx = content.index(marker)
+        before = content[:idx].rstrip("\n")
+        after = content[idx:]
+        return before + f"\n{row}\n\n" + after
     return content + f"\n{row}\n"
 
 
