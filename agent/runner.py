@@ -141,6 +141,25 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
                     "risk": _log_risk or "",
                     "_wiki_written": wiki_written,
                 }
+            # Wiki not written yet — inject one hard forcing message and retry
+            if not wiki_written and tool_calls_total < max_tool_calls:
+                print("  ~ no wiki write detected — forcing decision log")
+                messages.append({
+                    "role": "assistant",
+                    "content": content,
+                    "tool_calls": [],
+                })
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "You have not logged your decision yet. "
+                        "You MUST call append_trade_log RIGHT NOW with your decision "
+                        "(BUY <ticker> or STAND_ASIDE), rationale, and biggest_risk. "
+                        "Then call update_ticker_page. Then output your final DECISION line. "
+                        "Do not output any text before calling append_trade_log."
+                    ),
+                })
+                continue  # re-enter the loop with the forcing message
             return _parse_decision(visible, wiki_written=wiki_written)
 
         messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
