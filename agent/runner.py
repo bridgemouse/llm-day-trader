@@ -265,6 +265,30 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
 
             result = TOOL_MAP[fn_name](fn_args) if fn_name in TOOL_MAP else {"error": f"Unknown tool: {fn_name}"}
 
+            # After get_portfolio_state: inject a loser alert for positions down -2%+
+            if fn_name == "get_portfolio_state" and "positions" in result:
+                losers = [
+                    f"{p['ticker']} ({p['unrealized_plpc']:+.1f}%)"
+                    for p in result["positions"]
+                    if p.get("unrealized_plpc", 0) <= -2.0
+                ]
+                if losers:
+                    messages.append({
+                        "role": "tool",
+                        "content": json.dumps(result),
+                    })
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            f"ALERT: These positions are down -2% or more: {', '.join(losers)}. "
+                            "Per your exit criteria, call get_market_snapshot() on each one "
+                            "and close_position() if MACD is bearish or price broke SMA20. "
+                            "Do this before researching new tickers."
+                        ),
+                    })
+                    tool_calls_total += 1
+                    continue  # skip the normal result append below
+
             # After a successful close, nudge the model to write its decision log
             if fn_name == "close_position" and "error" not in result:
                 messages.append({
