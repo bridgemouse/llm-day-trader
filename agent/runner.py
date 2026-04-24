@@ -123,7 +123,10 @@ def run_agent(hint_tickers: list[str] | None = None) -> dict:
         tool_calls = msg.get("tool_calls") or []
 
         if not tool_calls:
-            if visible:
+            # Only print model text if wiki wasn't already written via tool calls.
+            # When _log_decision is set, the model's trailing text is noise
+            # (often raw JSON or a redundant summary) — suppress it.
+            if visible and not _log_decision:
                 wrapped = textwrap.fill(
                     visible,
                     width=68,
