@@ -13,7 +13,7 @@ import json
 import re
 import select
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, time as dt_time, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -45,7 +45,6 @@ MODEL = "qwen3:8b"
 
 def is_market_open() -> bool:
     """True if NYSE is currently open (9:30–16:00 ET, weekdays only)."""
-    from datetime import time as dt_time
     now = datetime.now(ET)
     if now.weekday() >= 5:
         return False
@@ -120,7 +119,11 @@ def run_cycle(hint_tickers: list[str]) -> dict:
 
 def show_report(cycle_summary: dict, next_scan_min: int) -> None:
     """Render and print the cycle report."""
-    portfolio = get_portfolio_state()
+    try:
+        portfolio = get_portfolio_state()
+    except Exception as e:
+        print(f"  [K-4SH] Could not fetch portfolio for report: {e}")
+        return
     realized_pnl = get_realized_pnl_total()
     report = render_cycle_report(
         decision=cycle_summary["decision"],
